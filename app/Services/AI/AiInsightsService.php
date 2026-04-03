@@ -77,21 +77,21 @@ PROMPT;
 
     private function resolveProvider(): ?AiProviderInterface
     {
-        $providerType = config('services.ai.provider', 'none');
+        $providerType = \App\Models\Setting::get('ai_provider', 'none');
 
         return match ($providerType) {
             'claude' => new ClaudeProvider(
-                apiKey: config('services.ai.api_key', ''),
-                model: config('services.ai.model', 'claude-sonnet-4-5-20250514'),
+                apiKey: \App\Models\Setting::get('ai_api_key', ''),
+                model: \App\Models\Setting::get('ai_model', 'claude-sonnet-4-5-20250514'),
             ),
             'openai' => new OpenAiCompatibleProvider(
-                baseUrl: config('services.ai.base_url', 'https://api.openai.com'),
-                model: config('services.ai.model', 'gpt-4o'),
-                apiKey: config('services.ai.api_key'),
+                baseUrl: \App\Models\Setting::get('ai_base_url', 'https://api.openai.com'),
+                model: \App\Models\Setting::get('ai_model', 'gpt-4o'),
+                apiKey: \App\Models\Setting::get('ai_api_key'),
             ),
             'ollama' => new OpenAiCompatibleProvider(
-                baseUrl: config('services.ai.base_url', 'http://localhost:11434'),
-                model: config('services.ai.model', 'llama3'),
+                baseUrl: \App\Models\Setting::get('ai_base_url', 'http://localhost:11434'),
+                model: \App\Models\Setting::get('ai_model', 'llama3'),
                 apiKey: null,
             ),
             default => null,

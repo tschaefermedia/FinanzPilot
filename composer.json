@@ -1,9 +1,18 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "tschaefermedia/financial-pilot",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "version": "1.0.0",
+    "homepage": "https://github.com/tschaefermedia/financial-pilot",
+    "authors": [
+        {
+            "name": "Tobias Schäfer",
+            "email": "tobias@buildit-consulting.de",
+            "homepage": "https://buildit-consulting.de"
+        }
+    ],
+    "description": "Self-hosted personal finance web application with smart categorization, bank imports, and AI insights.",
+    "keywords": ["finance", "personal-finance", "self-hosted", "laravel", "vue", "inertia"],
     "license": "MIT",
     "require": {
         "php": "^8.3",
