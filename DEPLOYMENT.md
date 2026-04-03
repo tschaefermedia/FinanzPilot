@@ -21,7 +21,7 @@ cp .env.example .env
 # 3. Edit .env — see "Environment Configuration" below
 nano .env
 
-# 4. Build and start containers
+# 4. Build and start containers (frontend assets are built automatically via multi-stage Docker build)
 docker compose build
 docker compose up -d
 
@@ -31,15 +31,11 @@ docker compose exec php composer install --no-dev --optimize-autoloader
 # 6. Generate application key
 docker compose exec php php artisan key:generate
 
-# 7. Build frontend assets
-docker compose exec node npm install
-docker compose exec node npm run build
-
-# 8. Run database migrations and seed categories
+# 7. Run database migrations and seed categories
 docker compose exec php php artisan migrate --force
 docker compose exec php php artisan db:seed --force
 
-# 9. Set permissions
+# 8. Set permissions
 docker compose exec php chown -R www-data:www-data storage bootstrap/cache database
 ```
 
@@ -77,33 +73,25 @@ AI_BASE_URL=              # Required for openai/ollama (e.g., http://192.168.1.1
 ## Docker Architecture
 
 ```
-┌─────────────────────────────────────────┐
-│  Docker Compose                         │
-│                                         │
-│  ┌───────────┐  ┌──────┐  ┌──────┐    │
-│  │   nginx   │  │ php  │  │ node │    │
-│  │  :80      │→ │ :9000│  │ :5173│    │
-│  │  (proxy)  │  │ (fpm)│  │(vite)│    │
-│  └───────────┘  └──────┘  └──────┘    │
-│                     │                   │
-│              database/database.sqlite   │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│  Docker Compose                     │
+│                                     │
+│  ┌───────────┐  ┌──────────────┐  │
+│  │   nginx   │  │     php      │  │
+│  │  :80      │→ │    :9000     │  │
+│  │  (proxy)  │  │ (fpm + assets│  │
+│  └───────────┘  │  via multi-  │  │
+│                  │  stage build)│  │
+│                  └──────────────┘  │
+│                        │           │
+│              database/database.sqlite │
+└─────────────────────────────────────┘
 ```
 
 | Service | Image | Purpose |
 |---------|-------|---------|
 | nginx | nginx:alpine | Reverse proxy, serves static files |
-| php | php:8.4-fpm (custom) | Laravel application server |
-| node | node:22-alpine | Vite asset compilation (build only, not needed at runtime) |
-
-### Production Optimization
-
-In production, the `node` service is only needed during deployment to build assets. You can stop it after the build:
-
-```bash
-docker compose exec node npm run build
-docker compose stop node
-```
+| php | php:8.4-fpm (multi-stage) | Laravel app server; frontend assets built during Docker image build via Node.js stage |
 
 ---
 
@@ -118,8 +106,7 @@ make migrate     # Run database migrations
 make seed        # Run database seeders
 make fresh       # Drop all tables, re-migrate, and re-seed
 make tinker      # Open Laravel Tinker REPL
-make npm-install # Install npm dependencies
-make vite-build  # Build frontend assets
+make rebuild      # Rebuild containers without cache
 ```
 
 ---
@@ -238,16 +225,17 @@ git pull
 # Rebuild containers (if Dockerfiles changed)
 docker compose build
 
-# Install/update dependencies
+# Rebuild (frontend assets are built automatically in the multi-stage Docker build)
+docker compose build
+
+# Install/update PHP dependencies
 docker compose exec php composer install --no-dev --optimize-autoloader
-docker compose exec node npm install
-docker compose exec node npm run build
 
 # Run new migrations
 docker compose exec php php artisan migrate --force
 
 # Restart
-docker compose restart
+docker compose up -d
 ```
 
 ---

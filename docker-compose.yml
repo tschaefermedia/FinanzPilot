@@ -13,18 +13,8 @@ services:
 
   php:
     build:
-      context: ./docker/php
-    volumes:
-      - .:/var/www/html
-    networks:
-      - finanzpilot
-
-  node:
-    build:
       context: .
-      dockerfile: docker/node/Dockerfile
-    ports:
-      - "5173:5173"
+      dockerfile: docker/php/Dockerfile
     volumes:
       - .:/var/www/html
     networks:

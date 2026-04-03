@@ -1,4 +1,4 @@
-.PHONY: up down build shell migrate seed fresh tinker npm-install vite-build
+.PHONY: up down build rebuild shell migrate seed fresh tinker
 
 up:
 	docker compose up -d
@@ -8,6 +8,9 @@ down:
 
 build:
 	docker compose build
+
+rebuild:
+	docker compose build --no-cache
 
 shell:
 	docker compose exec php bash
@@ -23,9 +26,3 @@ fresh:
 
 tinker:
 	docker compose exec php php artisan tinker
-
-npm-install:
-	docker compose exec node npm install
-
-vite-build:
-	docker compose exec node npm run build
