@@ -149,37 +149,37 @@ All variables can be set via Docker Compose `environment:`, a bind-mounted `.env
 
 ### Application
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `APP_NAME` | `FinanzPilot` | Application name (shown in browser tab) |
-| `APP_ENV` | `production` | Environment: `production` or `local` |
-| `APP_KEY` | *(auto-generated)* | Encryption key — generated automatically on first start |
-| `APP_DEBUG` | `false` | Set `true` for detailed error pages (development only) |
-| `APP_URL` | `http://localhost` | Public URL (used in exports, links) |
-| `APP_LOCALE` | `de` | Application locale |
+| Variable     | Default            | Description                                             |
+| ------------ | ------------------ | ------------------------------------------------------- |
+| `APP_NAME`   | `FinanzPilot`      | Application name (shown in browser tab)                 |
+| `APP_ENV`    | `production`       | Environment: `production` or `local`                    |
+| `APP_KEY`    | *(auto-generated)* | Encryption key — generated automatically on first start |
+| `APP_DEBUG`  | `false`            | Set `true` for detailed error pages (development only)  |
+| `APP_URL`    | `http://localhost` | Public URL (used in exports, links)                     |
+| `APP_LOCALE` | `de`               | Application locale                                      |
 
 ### Database
 
-| Variable | Default | Description |
-|----------|---------|-------------|
+| Variable        | Default  | Description                                  |
+| --------------- | -------- | -------------------------------------------- |
 | `DB_CONNECTION` | `sqlite` | Database driver (only `sqlite` is supported) |
 
 ### Session & Cache
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SESSION_DRIVER` | `file` | Session storage: `file`, `cookie`, `array` |
-| `SESSION_LIFETIME` | `120` | Session timeout in minutes |
-| `CACHE_STORE` | `file` | Cache backend: `file`, `array` |
-| `QUEUE_CONNECTION` | `sync` | Queue driver: `sync` (recommended) |
+| Variable           | Default | Description                                |
+| ------------------ | ------- | ------------------------------------------ |
+| `SESSION_DRIVER`   | `file`  | Session storage: `file`, `cookie`, `array` |
+| `SESSION_LIFETIME` | `120`   | Session timeout in minutes                 |
+| `CACHE_STORE`      | `file`  | Cache backend: `file`, `array`             |
+| `QUEUE_CONNECTION` | `sync`  | Queue driver: `sync` (recommended)         |
 
 ### Logging
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `LOG_CHANNEL` | `stack` | Log channel |
-| `LOG_STACK` | `single` | Stack channels |
-| `LOG_LEVEL` | `error` | Minimum log level: `debug`, `info`, `warning`, `error` |
+| Variable      | Default  | Description                                            |
+| ------------- | -------- | ------------------------------------------------------ |
+| `LOG_CHANNEL` | `stack`  | Log channel                                            |
+| `LOG_STACK`   | `single` | Stack channels                                         |
+| `LOG_LEVEL`   | `error`  | Minimum log level: `debug`, `info`, `warning`, `error` |
 
 ### AI Configuration
 
@@ -196,21 +196,21 @@ AI provider settings are managed through the **Settings** page in the app and st
 ┌─────────────────────────────────────┐
 │  Docker Compose                     │
 │                                     │
-│  ┌───────────┐  ┌──────────────┐  │
-│  │   nginx   │  │     php      │  │
-│  │  :80      │→ │    :9000     │  │
-│  │  (proxy)  │  │  (fpm +      │  │
-│  └───────────┘  │  built assets)│  │
-│                  └──────────────┘  │
-│                        │           │
-│              database/database.sqlite │
+│  ┌───────────┐   ┌───────────────┐  │
+│  │   nginx   │   │     php       │  │
+│  │  :80      │ → │    :9000      │  │
+│  │  (proxy)  │   │  (fpm +       │  │
+│  └───────────┘   │  built assets)│  │
+│                  └───────────────┘  │
+│                        │            │
+│            database/database.sqlite │
 └─────────────────────────────────────┘
 ```
 
-| Service | Image | Purpose |
-|---------|-------|---------|
-| nginx | nginx:alpine | Reverse proxy, serves static files |
-| php | ghcr.io/tschaefermedia/finanzpilot | Laravel app + pre-built frontend assets |
+| Service | Image                              | Purpose                                 |
+| ------- | ---------------------------------- | --------------------------------------- |
+| nginx   | nginx:alpine                       | Reverse proxy, serves static files      |
+| php     | ghcr.io/tschaefermedia/finanzpilot | Laravel app + pre-built frontend assets |
 
 ---
 
@@ -304,23 +304,23 @@ The project includes a `.mcp.json` file. If using from a different location, add
 
 ### Available MCP Resources
 
-| Resource | URI | Description |
-|----------|-----|-------------|
-| Transactions | `finanzpilot://transactions` | Last 100 transactions |
-| Categories | `finanzpilot://categories` | Category tree with totals |
-| Summary | `finanzpilot://summary/current` | Current month summary |
-| Loans | `finanzpilot://loans` | Active loans with paid amounts |
-| Recurring | `finanzpilot://recurring` | Recurring templates |
-| Balance | `finanzpilot://balance` | Total balance + 6-month trend |
+| Resource     | URI                             | Description                    |
+| ------------ | ------------------------------- | ------------------------------ |
+| Transactions | `finanzpilot://transactions`    | Last 100 transactions          |
+| Categories   | `finanzpilot://categories`      | Category tree with totals      |
+| Summary      | `finanzpilot://summary/current` | Current month summary          |
+| Loans        | `finanzpilot://loans`           | Active loans with paid amounts |
+| Recurring    | `finanzpilot://recurring`       | Recurring templates            |
+| Balance      | `finanzpilot://balance`         | Total balance + 6-month trend  |
 
 ### Available MCP Tools
 
-| Tool | Description |
-|------|-------------|
-| `query_transactions` | Search/filter transactions by date, category, amount, text |
-| `add_transaction` | Create a new manual transaction |
-| `categorize_transaction` | Assign a category to a transaction |
-| `add_rule` | Create a categorization rule |
+| Tool                     | Description                                                |
+| ------------------------ | ---------------------------------------------------------- |
+| `query_transactions`     | Search/filter transactions by date, category, amount, text |
+| `add_transaction`        | Create a new manual transaction                            |
+| `categorize_transaction` | Assign a category to a transaction                         |
+| `add_rule`               | Create a categorization rule                               |
 
 ---
 

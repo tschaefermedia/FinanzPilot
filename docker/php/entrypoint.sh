@@ -10,15 +10,21 @@ fi
 mkdir -p /var/www/html/public/build
 cp -r /opt/app-source/public/build/. /var/www/html/public/build/
 
-# Create .env from example if it doesn't exist and no bind mount provided
+# Create .env from example if it doesn't exist
 if [ ! -f /var/www/html/.env ]; then
     echo "Creating .env from .env.example..."
     cp /var/www/html/.env.example /var/www/html/.env
 fi
 
+# Generate app key if not set (without artisan to avoid bootstrap issues)
+if grep -q "^APP_KEY=$" /var/www/html/.env; then
+    KEY=$(head -c 32 /dev/urandom | base64 | tr -d '/+=' | head -c 32)
+    sed -i "s|^APP_KEY=.*|APP_KEY=base64:$(echo -n "$KEY" | base64)|" /var/www/html/.env
+    echo "Application key generated."
+fi
+
 # Apply environment variable overrides to .env
-# Any Docker env var starting with APP_, DB_, SESSION_, CACHE_, or LOG_ overrides the .env value
-for var in APP_NAME APP_ENV APP_DEBUG APP_URL APP_KEY DB_CONNECTION SESSION_DRIVER CACHE_STORE QUEUE_CONNECTION LOG_CHANNEL LOG_LEVEL; do
+for var in APP_NAME APP_ENV APP_DEBUG APP_URL DB_CONNECTION SESSION_DRIVER CACHE_STORE QUEUE_CONNECTION LOG_CHANNEL LOG_LEVEL; do
     eval val=\$$var
     if [ -n "$val" ]; then
         if grep -q "^${var}=" /var/www/html/.env; then
@@ -29,7 +35,7 @@ for var in APP_NAME APP_ENV APP_DEBUG APP_URL APP_KEY DB_CONNECTION SESSION_DRIV
     fi
 done
 
-# Ensure storage and cache directories exist and are writable
+# Ensure storage and cache directories exist
 mkdir -p /var/www/html/storage/logs
 mkdir -p /var/www/html/storage/framework/cache
 mkdir -p /var/www/html/storage/framework/sessions
@@ -42,15 +48,13 @@ mkdir -p /var/www/html/database
 # Create SQLite database if it doesn't exist
 touch /var/www/html/database/database.sqlite
 
-# Fix permissions
+# Fix ALL permissions before running any PHP
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database /var/www/html/.env
 
-# Generate app key if not set
-if grep -q "^APP_KEY=$" /var/www/html/.env; then
-    php /var/www/html/artisan key:generate --force
-fi
+# Run migrations
+php /var/www/html/artisan migrate --force --no-interaction 2>/dev/null || true
 
-# Run migrations automatically
-php /var/www/html/artisan migrate --force 2>/dev/null
+# Seed if database is empty (no categories = fresh install)
+php /var/www/html/artisan db:seed --no-interaction --force 2>/dev/null || true
 
 exec "$@"
