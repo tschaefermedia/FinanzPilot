@@ -9,6 +9,10 @@ class CategorySeeder extends Seeder
 {
     public function run(): void
     {
+        if (Category::count() > 0) {
+            return;
+        }
+
         $categories = [
             ['name' => 'Einnahmen', 'type' => 'income', 'icon' => 'pi-arrow-down-left', 'children' => [
                 ['name' => 'Gehalt'], ['name' => 'Nebeneinkommen'], ['name' => 'Sonstiges'],
