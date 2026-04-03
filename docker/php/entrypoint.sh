@@ -17,7 +17,7 @@ if [ ! -f /var/www/html/.env ]; then
 fi
 
 # Generate app key if not set (without artisan to avoid bootstrap issues)
-if grep -q "^APP_KEY=$" /var/www/html/.env; then
+if grep -q "^APP_KEY=" /var/www/html/.env && ! grep -q "^APP_KEY=base64:" /var/www/html/.env; then
     KEY=$(head -c 32 /dev/urandom | base64 | tr -d '/+=' | head -c 32)
     sed -i "s|^APP_KEY=.*|APP_KEY=base64:$(echo -n "$KEY" | base64)|" /var/www/html/.env
     echo "Application key generated."
