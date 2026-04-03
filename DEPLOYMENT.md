@@ -40,15 +40,14 @@ services:
       - APP_NAME=FinanzPilot
       - APP_ENV=production
       - APP_DEBUG=false
-      - APP_URL=http://localhost
-      # Optional: bind-mount a custom .env instead
-      # - ./.env:/var/www/html/.env
+      - APP_URL=https://your-domain.example.com
+      - SESSION_DRIVER=file
+      - CACHE_STORE=file
+      - QUEUE_CONNECTION=sync
 
 volumes:
   app-data:
 ```
-
-Environment variables passed via `environment:` override `.env` values. Alternatively, bind-mount your own `.env` file for full control.
 
 ### 3. Create nginx.conf
 
@@ -82,15 +81,12 @@ docker compose up -d
 On first start, the entrypoint automatically:
 - Creates `.env` from defaults
 - Generates the application key
-- Runs database migrations
+- Runs database migrations and seeds categories
 - Sets all file permissions
 
 The app is now running at `http://<your-server-ip>`.
 
-To seed the default German categories:
-```bash
-docker compose exec php php artisan db:seed --force
-```
+That's it. Two files (`docker-compose.yml` + `nginx.conf`), one command.
 
 ### Updating to a new version
 
