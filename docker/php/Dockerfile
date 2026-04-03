@@ -20,5 +20,12 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# Copy built frontend assets from stage 1
-COPY --from=frontend /app/public/build/ ./public/build/
+# Store built assets in a safe location (volume mount overwrites /var/www/html)
+COPY --from=frontend /app/public/build/ /opt/build-assets/
+
+# Entrypoint: copy built assets into the volume-mounted public dir, then start php-fpm
+COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["php-fpm"]
