@@ -35,9 +35,8 @@ services:
     image: ghcr.io/tschaefermedia/financial-pilot:latest
     volumes:
       - app-data:/var/www/html
-    environment:
-      - APP_ENV=production
-      - APP_DEBUG=false
+      - ./.env:/var/www/html/.env
+      - ./database:/var/www/html/database
 
 volumes:
   app-data:
@@ -83,12 +82,8 @@ QUEUE_CONNECTION=sync
 ### 5. Start and initialize
 
 ```bash
+mkdir -p database
 docker compose up -d
-
-# Copy .env into the container volume
-docker compose cp .env php:/var/www/html/.env
-
-# Install dependencies and initialize
 docker compose exec php composer install --no-dev --optimize-autoloader
 docker compose exec php php artisan key:generate
 docker compose exec php php artisan migrate --force
