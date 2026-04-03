@@ -32,7 +32,7 @@ services:
       - php
 
   php:
-    image: ghcr.io/tschaefermedia/FinanzPilot:latest
+    image: ghcr.io/tschaefermedia/finanzpilot:latest
     volumes:
       - app-data:/var/www/html
       - ./.env:/var/www/html/.env
@@ -180,7 +180,7 @@ AI is configured through the Settings page in the app (stored in the database, n
 | Service | Image | Purpose |
 |---------|-------|---------|
 | nginx | nginx:alpine | Reverse proxy, serves static files |
-| php | ghcr.io/tschaefermedia/FinanzPilot | Laravel app + pre-built frontend assets |
+| php | ghcr.io/tschaefermedia/finanzpilot | Laravel app + pre-built frontend assets |
 
 ---
 
