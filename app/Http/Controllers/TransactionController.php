@@ -1,0 +1,145 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Category;
+use App\Models\Transaction;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+
+class TransactionController extends Controller
+{
+    public function index(Request $request)
+    {
+        $query = Transaction::with(['category', 'account']);
+
+        if ($request->filled('search')) {
+            $search = '%' . $request->search . '%';
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', $search)
+                  ->orWhere('counterparty', 'like', $search);
+            });
+        }
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->where('date', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->where('date', '<=', $request->date_to);
+        }
+
+        if ($request->filled('type')) {
+            $query->where('amount', $request->type === 'income' ? '>' : '<', 0);
+        }
+
+        if ($request->filled('account_id')) {
+            $query->where('account_id', $request->account_id);
+        }
+
+        $transactions = $query->orderByDesc('date')->orderByDesc('id')->paginate(25)->withQueryString();
+
+        $accounts = \App\Models\Account::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
+
+        return Inertia::render('Transactions/Index', [
+            'transactions' => $transactions,
+            'categories' => Category::with('parent')->orderBy('name')->get(),
+            'filters' => $request->only(['search', 'category_id', 'date_from', 'date_to', 'type', 'account_id']),
+            'accounts' => $accounts,
+        ]);
+    }
+
+    public function create()
+    {
+        return Inertia::render('Transactions/Form', [
+            'categories' => $this->getCategoryTree(),
+            'accounts' => \App\Models\Account::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'date' => 'required|date',
+            'amount' => 'required|numeric',
+            'description' => 'required|string|max:255',
+            'counterparty' => 'nullable|string|max:255',
+            'category_id' => 'nullable|exists:categories,id',
+            'notes' => 'nullable|string',
+            'account_id' => 'nullable|exists:accounts,id',
+        ]);
+
+        $validated['source'] = 'manual';
+
+        Transaction::create($validated);
+
+        return redirect()->route('transactions.index')->with('success', 'Buchung erstellt.');
+    }
+
+    public function edit(Transaction $transaction)
+    {
+        return Inertia::render('Transactions/Form', [
+            'transaction' => $transaction->load('category'),
+            'categories' => $this->getCategoryTree(),
+            'accounts' => \App\Models\Account::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
+        ]);
+    }
+
+    public function update(Request $request, Transaction $transaction)
+    {
+        $validated = $request->validate([
+            'date' => 'required|date',
+            'amount' => 'required|numeric',
+            'description' => 'required|string|max:255',
+            'counterparty' => 'nullable|string|max:255',
+            'category_id' => 'nullable|exists:categories,id',
+            'notes' => 'nullable|string',
+            'account_id' => 'nullable|exists:accounts,id',
+        ]);
+
+        $transaction->update($validated);
+
+        return redirect()->route('transactions.index')->with('success', 'Buchung aktualisiert.');
+    }
+
+    public function destroy(Transaction $transaction)
+    {
+        $transaction->delete();
+
+        return redirect()->back()->with('success', 'Buchung gelöscht.');
+    }
+
+    private function getCategoryTree(): array
+    {
+        $categories = Category::whereNull('parent_id')
+            ->with('children')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        return $categories->map(fn ($category) => $this->mapCategoryNode($category))->toArray();
+    }
+
+    private function mapCategoryNode(Category $category): array
+    {
+        $node = [
+            'key' => $category->id,
+            'label' => $category->name,
+            'data' => $category->id,
+        ];
+
+        if ($category->children->isNotEmpty()) {
+            $node['children'] = $category->children
+                ->sortBy('sort_order')
+                ->map(fn ($child) => $this->mapCategoryNode($child))
+                ->values()
+                ->toArray();
+        }
+
+        return $node;
+    }
+}
