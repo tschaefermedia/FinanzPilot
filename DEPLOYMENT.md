@@ -36,10 +36,19 @@ services:
     volumes:
       - app-data:/var/www/html
       - ./database:/var/www/html/database
+    environment:
+      - APP_NAME=FinanzPilot
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_URL=http://localhost
+      # Optional: bind-mount a custom .env instead
+      # - ./.env:/var/www/html/.env
 
 volumes:
   app-data:
 ```
+
+Environment variables passed via `environment:` override `.env` values. Alternatively, bind-mount your own `.env` file for full control.
 
 ### 3. Create nginx.conf
 

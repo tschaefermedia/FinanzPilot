@@ -10,11 +10,24 @@ fi
 mkdir -p /var/www/html/public/build
 cp -r /opt/app-source/public/build/. /var/www/html/public/build/
 
-# Create .env from example if it doesn't exist
+# Create .env from example if it doesn't exist and no bind mount provided
 if [ ! -f /var/www/html/.env ]; then
     echo "Creating .env from .env.example..."
     cp /var/www/html/.env.example /var/www/html/.env
 fi
+
+# Apply environment variable overrides to .env
+# Any Docker env var starting with APP_, DB_, SESSION_, CACHE_, or LOG_ overrides the .env value
+for var in APP_NAME APP_ENV APP_DEBUG APP_URL APP_KEY DB_CONNECTION SESSION_DRIVER CACHE_STORE QUEUE_CONNECTION LOG_CHANNEL LOG_LEVEL; do
+    eval val=\$$var
+    if [ -n "$val" ]; then
+        if grep -q "^${var}=" /var/www/html/.env; then
+            sed -i "s|^${var}=.*|${var}=${val}|" /var/www/html/.env
+        else
+            echo "${var}=${val}" >> /var/www/html/.env
+        fi
+    fi
+done
 
 # Ensure storage and cache directories exist and are writable
 mkdir -p /var/www/html/storage/logs
