@@ -96,9 +96,10 @@ function deleteCategory(id) {
                         <span class="text-gray-500">{{ node.data.transactionsCount ?? 0 }}</span>
                     </template>
                 </Column>
-                <Column header="Aktionen" style="width: 120px">
+                <Column header="Aktionen" style="width: 150px">
                     <template #body="{ node }">
                         <div class="flex gap-1">
+                            <Button icon="pi pi-plus" text rounded size="small" severity="success" @click="openCreate(node.data.id)" title="Unterkategorie erstellen" />
                             <Button icon="pi pi-pencil" text rounded size="small" @click="openEdit(node.data)" />
                             <Button icon="pi pi-trash" text rounded size="small" severity="danger" @click="deleteCategory(node.data.id)" />
                         </div>
