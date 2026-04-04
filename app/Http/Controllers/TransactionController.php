@@ -49,11 +49,12 @@ class TransactionController extends Controller
             $sortField = 'date';
         }
 
-        $query->orderBy($sortField, $sortOrder === 'asc' ? 'asc' : 'desc');
+        $direction = $sortOrder === 'asc' ? 'asc' : 'desc';
+        $query->orderBy($sortField, $direction);
         if ($sortField !== 'date') {
-            $query->orderByDesc('date');
+            $query->orderBy('date', $direction);
         }
-        $query->orderByDesc('id');
+        $query->orderBy('id', $direction);
 
         $transactions = $query->paginate(25)->withQueryString();
 
