@@ -128,7 +128,7 @@ function typeLabel(type) {
         </PageHeader>
 
         <div v-if="loans.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div v-for="loan in loans" :key="loan.id" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6 cursor-pointer hover:border-blue-300 dark:hover:border-blue-600 transition-colors" @click="router.visit(`/loans/${loan.id}`)"
+            <div v-for="loan in loans" :key="loan.id" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6 cursor-pointer hover:border-blue-300 dark:hover:border-blue-600 transition-colors" @click="router.visit(`/loans/${loan.id}`)">
                 <div class="flex items-start justify-between mb-4">
                     <div>
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ loan.name }}</h3>
