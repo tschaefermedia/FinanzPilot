@@ -183,7 +183,7 @@ class ExcelExportService
         // Format amount column as German currency
         $lastRow = $row - 1;
         $sheet->getStyle("B2:B{$lastRow}")->getNumberFormat()
-            ->setFormatCode('#.##0,00 €;[Red]-#.##0,00 €');
+            ->setFormatCode('#,##0.00 €;[Red]-#,##0.00 €');
 
         // Date column format
         $sheet->getStyle("A2:A{$lastRow}")->getNumberFormat()
@@ -232,7 +232,7 @@ class ExcelExportService
             if (is_numeric($value)) {
                 $sheet->setCellValue("B{$row}", (float) $value);
                 $sheet->getStyle("B{$row}")->getNumberFormat()
-                    ->setFormatCode('#.##0,00 €;[Red]-#.##0,00 €');
+                    ->setFormatCode('#,##0.00 €;[Red]-#,##0.00 €');
             } else {
                 $sheet->setCellValue("B{$row}", $value);
             }
@@ -264,7 +264,7 @@ class ExcelExportService
             $sheet->setCellValue("A{$row}", $catName);
             $sheet->setCellValue("B{$row}", $total);
             $sheet->getStyle("B{$row}")->getNumberFormat()
-                ->setFormatCode('#.##0,00 €');
+                ->setFormatCode('#,##0.00 €');
             $percent = $totalExpenses > 0 ? round(($total / $totalExpenses) * 100, 1) : 0;
             $sheet->setCellValue("C{$row}", $percent.' %');
             $row++;
