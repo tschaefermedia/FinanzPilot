@@ -19,6 +19,7 @@ const { formatCurrency, formatDate, formatNumber } = useFormatters();
 
 const props = defineProps({
     loans: { type: Array, default: () => [] },
+    accounts: { type: Array, default: () => [] },
 });
 
 const showDialog = ref(false);
@@ -32,6 +33,10 @@ const form = useForm({
     start_date: new Date(),
     term_months: null,
     payment_day: null,
+    monthly_rate: null,
+    initial_balance: null,
+    match_description: '',
+    account_id: null,
     direction: 'owed_by_me',
     notes: '',
 });
@@ -64,6 +69,10 @@ function openEdit(loan) {
     form.start_date = new Date(loan.start_date + 'T00:00:00');
     form.term_months = loan.term_months;
     form.payment_day = loan.payment_day;
+    form.monthly_rate = loan.monthly_rate ? parseFloat(loan.monthly_rate) : null;
+    form.initial_balance = loan.initial_balance ? parseFloat(loan.initial_balance) : null;
+    form.match_description = loan.match_description || '';
+    form.account_id = loan.account_id;
     form.direction = loan.direction;
     form.notes = loan.notes || '';
     showDialog.value = true;
@@ -132,19 +141,19 @@ function typeLabel(type) {
                 <div class="grid grid-cols-2 gap-4 text-sm mb-4">
                     <div>
                         <span class="text-gray-500 dark:text-gray-400">Summe</span>
-                        <p class="font-semibold">{{ formatCurrency(loan.principal) }}</p>
+                        <p class="font-semibold text-gray-900 dark:text-white">{{ formatCurrency(loan.principal) }}</p>
                     </div>
                     <div v-if="loan.type === 'bank'">
                         <span class="text-gray-500 dark:text-gray-400">Zinssatz</span>
-                        <p class="font-semibold">{{ formatNumber(loan.interest_rate, 2) }} %</p>
+                        <p class="font-semibold text-gray-900 dark:text-white">{{ formatNumber(loan.interest_rate, 2) }} %</p>
                     </div>
                     <div>
                         <span class="text-gray-500 dark:text-gray-400">Restbetrag</span>
-                        <p class="font-semibold">{{ formatCurrency(loan.summary?.remainingBalance ?? loan.principal) }}</p>
+                        <p class="font-semibold text-gray-900 dark:text-white">{{ formatCurrency(loan.summary?.remainingBalance ?? loan.principal) }}</p>
                     </div>
                     <div v-if="loan.summary?.monthlyPayment">
                         <span class="text-gray-500 dark:text-gray-400">Rate/Monat</span>
-                        <p class="font-semibold">{{ formatCurrency(loan.summary.monthlyPayment) }}</p>
+                        <p class="font-semibold text-gray-900 dark:text-white">{{ formatCurrency(loan.summary.monthlyPayment) }}</p>
                     </div>
                 </div>
 
@@ -194,14 +203,36 @@ function typeLabel(type) {
                         <InputNumber v-model="form.term_months" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Zahltag</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Abbuchungstag</label>
                         <InputNumber v-model="form.payment_day" :min="1" :max="31" class="w-full" />
+                        <small class="text-xs text-gray-500 dark:text-gray-400">Wird zum automatischen Zuordnen von Buchungen verwendet.</small>
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Buchungstext</label>
+                        <InputText v-model="form.match_description" class="w-full" placeholder="z.B. Kreditnr. oder Bankname" />
+                        <small class="text-xs text-gray-500 dark:text-gray-400">Stichwort im Buchungstext zum Zuordnen.</small>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Konto</label>
+                        <Select v-model="form.account_id" :options="accounts" optionLabel="name" optionValue="id" class="w-full" placeholder="Alle Konten" showClear />
+                        <small class="text-xs text-gray-500 dark:text-gray-400">Konto für automatische Zuordnung einschränken.</small>
+                    </div>
+                </div>
+
+                <div v-if="form.type === 'informal'">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Rate/Monat</label>
+                    <InputNumber v-model="form.monthly_rate" mode="currency" currency="EUR" locale="de-DE" class="w-full" />
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Startdatum</label>
                     <DatePicker v-model="form.start_date" dateFormat="dd.mm.yy" showIcon class="w-full" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Anfangssaldo</label>
+                    <InputNumber v-model="form.initial_balance" mode="currency" currency="EUR" locale="de-DE" class="w-full" />
+                    <small class="text-xs text-gray-500 dark:text-gray-400">Restschuld bei Beginn der Erfassung. Leer lassen wenn das Darlehen neu ist.</small>
                 </div>
 
                 <div>

@@ -72,13 +72,14 @@ class AmortizationService
         if (empty($schedule)) {
             // Informal loan — simple summary
             $totalPaid = $loan->payments->sum('amount');
+            $base = (float) ($loan->initial_balance ?? $loan->principal);
 
             return [
                 'totalPayments' => round($totalPaid, 2),
-                'remainingBalance' => round((float) $loan->principal - $totalPaid, 2),
+                'remainingBalance' => round($base - $totalPaid, 2),
                 'totalInterest' => 0,
-                'monthlyPayment' => 0,
-                'progressPercent' => $loan->principal > 0 ? round(($totalPaid / (float) $loan->principal) * 100, 1) : 0,
+                'monthlyPayment' => (float) ($loan->monthly_rate ?? 0),
+                'progressPercent' => $base > 0 ? round(($totalPaid / $base) * 100, 1) : 0,
             ];
         }
 
@@ -89,7 +90,7 @@ class AmortizationService
         // Calculate actual remaining balance based on payments made
         $totalPaid = $loan->payments->sum('amount');
         $paidPrincipal = 0;
-        $remaining = (float) $loan->principal;
+        $base = (float) ($loan->initial_balance ?? $loan->principal);
 
         foreach ($schedule as $entry) {
             if ($totalPaid >= $entry['payment']) {
@@ -100,14 +101,14 @@ class AmortizationService
             }
         }
 
-        $remaining -= $paidPrincipal;
+        $remaining = $base - $paidPrincipal;
 
         return [
             'totalPayments' => round($totalPayments, 2),
             'remainingBalance' => round(max(0, $remaining), 2),
             'totalInterest' => round($totalInterest, 2),
             'monthlyPayment' => round($monthlyPayment, 2),
-            'progressPercent' => $loan->principal > 0 ? round(($paidPrincipal / (float) $loan->principal) * 100, 1) : 0,
+            'progressPercent' => $base > 0 ? round(($paidPrincipal / $base) * 100, 1) : 0,
             'schedule' => $schedule,
         ];
     }
@@ -131,11 +132,20 @@ class AmortizationService
         $matched = 0;
 
         // Find unmatched transactions near the payment amount
-        $transactions = Transaction::where('amount', '<', 0)
+        $query = Transaction::where('amount', '<', 0)
             ->whereBetween(DB::raw('ABS(amount)'), [$monthlyAmount * 0.95, $monthlyAmount * 1.05])
             ->whereDoesntHave('loanPayment')
-            ->where('date', '>=', $loan->start_date)
-            ->get();
+            ->where('date', '>=', $loan->start_date);
+
+        if ($loan->account_id) {
+            $query->where('account_id', $loan->account_id);
+        }
+
+        if ($loan->match_description) {
+            $query->where('description', 'like', '%'.$loan->match_description.'%');
+        }
+
+        $transactions = $query->get();
 
         foreach ($transactions as $transaction) {
             // Check if payment day is close

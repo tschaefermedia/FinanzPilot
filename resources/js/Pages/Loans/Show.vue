@@ -64,6 +64,29 @@ function autoMatch() {
     router.post(`/loans/${props.loan.id}/auto-match`);
 }
 
+const showMatchDialog = ref(false);
+const unmatchedTransactions = ref([]);
+const loadingTransactions = ref(false);
+
+async function openMatchDialog() {
+    loadingTransactions.value = true;
+    showMatchDialog.value = true;
+    try {
+        const response = await fetch(`/loans/${props.loan.id}/unmatched-transactions`);
+        unmatchedTransactions.value = await response.json();
+    } finally {
+        loadingTransactions.value = false;
+    }
+}
+
+function matchTransaction(transactionId) {
+    router.post(`/loans/${props.loan.id}/match-transaction`, { transaction_id: transactionId }, {
+        onSuccess: () => {
+            unmatchedTransactions.value = unmatchedTransactions.value.filter(t => t.id !== transactionId);
+        },
+    });
+}
+
 function paymentTypeLabel(type) {
     return { scheduled: 'Planmäßig', extra: 'Sondertilgung', manual: 'Manuell' }[type] || type;
 }
@@ -102,6 +125,7 @@ const chartSeries = computed(() => [
     <AppLayout>
         <PageHeader :title="loan.name">
             <Button label="Zahlung erfassen" icon="pi pi-plus" size="small" @click="showPaymentDialog = true" />
+            <Button label="Buchung zuordnen" icon="pi pi-link" size="small" severity="secondary" @click="openMatchDialog" />
             <Button v-if="loan.type === 'bank'" label="Auto-Match" icon="pi pi-sync" size="small" severity="secondary" @click="autoMatch" />
         </PageHeader>
 
@@ -138,11 +162,11 @@ const chartSeries = computed(() => [
                         <Column header="Buchung" style="width: 200px">
                             <template #body="{ data }">
                                 <span v-if="data.transaction" class="text-xs text-gray-500 dark:text-gray-400">{{ data.transaction.description }}</span>
-                                <span v-else class="text-xs text-gray-400 dark:text-gray-500">Manuell</span>
+                                <span v-else class="text-xs text-gray-400 dark:text-gray-400">Manuell</span>
                             </template>
                         </Column>
                     </DataTable>
-                    <div v-else class="py-8 text-center text-gray-400 dark:text-gray-500 text-sm">Noch keine Zahlungen erfasst.</div>
+                    <div v-else class="py-8 text-center text-gray-400 dark:text-gray-400 text-sm">Noch keine Zahlungen erfasst.</div>
                 </TabPanel>
 
                 <TabPanel v-if="hasSchedule" header="Tilgungsplan">
@@ -188,6 +212,26 @@ const chartSeries = computed(() => [
                     <Button type="submit" label="Speichern" size="small" :loading="paymentForm.processing" />
                 </div>
             </form>
+        </Dialog>
+
+        <!-- Match Transaction Dialog -->
+        <Dialog v-model:visible="showMatchDialog" header="Buchung zuordnen" modal class="w-full max-w-2xl">
+            <div v-if="loadingTransactions" class="py-8 text-center text-gray-500 text-sm">Buchungen werden geladen...</div>
+            <div v-else-if="unmatchedTransactions.length === 0" class="py-8 text-center text-gray-400 dark:text-gray-400 text-sm">Keine passenden Buchungen gefunden.</div>
+            <DataTable v-else :value="unmatchedTransactions" class="text-sm" :rows="10" paginator>
+                <Column field="date" header="Datum" style="width: 110px">
+                    <template #body="{ data }">{{ formatDate(data.date) }}</template>
+                </Column>
+                <Column field="description" header="Beschreibung" />
+                <Column field="amount" header="Betrag" style="width: 120px">
+                    <template #body="{ data }">{{ formatCurrency(Math.abs(data.amount)) }}</template>
+                </Column>
+                <Column header="" style="width: 80px">
+                    <template #body="{ data }">
+                        <Button icon="pi pi-link" text rounded size="small" @click="matchTransaction(data.id)" />
+                    </template>
+                </Column>
+            </DataTable>
         </Dialog>
     </AppLayout>
 </template>

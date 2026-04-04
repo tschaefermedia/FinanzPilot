@@ -39,6 +39,8 @@ Route::post('recurring/{recurring}/generate', [RecurringTemplateController::clas
 Route::resource('loans', LoanController::class)->except(['create', 'edit']);
 Route::post('loans/{loan}/payments', [LoanController::class, 'addPayment'])->name('loans.addPayment');
 Route::post('loans/{loan}/auto-match', [LoanController::class, 'autoMatch'])->name('loans.autoMatch');
+Route::get('loans/{loan}/unmatched-transactions', [LoanController::class, 'unmatchedTransactions'])->name('loans.unmatchedTransactions');
+Route::post('loans/{loan}/match-transaction', [LoanController::class, 'matchTransaction'])->name('loans.matchTransaction');
 
 // Export
 Route::get('export', [ExportController::class, 'index'])->name('export.index');

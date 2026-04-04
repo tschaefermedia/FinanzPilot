@@ -111,28 +111,34 @@ class FinancialSnapshot
         usort($growing, fn ($a, $b) => $b['change'] <=> $a['change']);
         usort($shrinking, fn ($a, $b) => $a['change'] <=> $b['change']);
 
-        // Loan summary
+        // Loan summary — per-loan details + total monthly burden
         $loanSummary = [];
         $loans = Loan::with('payments')->get();
         if ($loans->isNotEmpty()) {
             $amortization = new AmortizationService;
-            $totalPrincipal = 0;
-            $totalRemaining = 0;
-            $count = 0;
+            $loanDetails = [];
+            $totalMonthlyBurden = 0;
 
-            foreach ($loans->where('direction', 'owed_by_me') as $loan) {
+            foreach ($loans as $loan) {
                 $summary = $amortization->calculateSummary($loan);
-                $totalPrincipal += (float) $loan->principal;
-                $totalRemaining += $summary['remainingBalance'];
-                $count++;
-            }
+                $monthlyPayment = $summary['monthlyPayment'] ?? 0;
+                $totalMonthlyBurden += $monthlyPayment;
 
-            if ($count > 0) {
-                $loanSummary = [
-                    'count' => $count,
-                    'progressPercent' => $totalPrincipal > 0 ? round((($totalPrincipal - $totalRemaining) / $totalPrincipal) * 100, 1) : 0,
+                $loanDetails[] = [
+                    'name' => $loan->name,
+                    'type' => $loan->type === 'bank' ? 'Bankdarlehen' : 'Informell',
+                    'direction' => $loan->direction === 'owed_by_me' ? 'Schulden' : 'Forderung',
+                    'progressPercent' => $summary['progressPercent'],
+                    'monthlyPercent' => $currentIncome > 0 ? round(($monthlyPayment / $currentIncome) * 100, 1) : 0,
                 ];
             }
+
+            $loanSummary = [
+                'count' => count($loanDetails),
+                'loans' => $loanDetails,
+                'totalMonthlyBurden' => $totalMonthlyBurden,
+                'monthlyBurdenPercent' => $currentIncome > 0 ? round(($totalMonthlyBurden / $currentIncome) * 100, 1) : 0,
+            ];
         }
 
         $hash = hash('sha256', json_encode([$monthlyRatios, $categoryShares, $savingsRate, $loanSummary]));
@@ -182,9 +188,11 @@ class FinancialSnapshot
         }
 
         if (! empty($this->loanSummary)) {
-            $lines[] = "\nKredite:";
-            $lines[] = "  Anzahl: {$this->loanSummary['count']}";
-            $lines[] = "  Tilgungsfortschritt: {$this->loanSummary['progressPercent']}%";
+            $lines[] = "\nKredite ({$this->loanSummary['count']}):";
+            foreach ($this->loanSummary['loans'] as $loan) {
+                $lines[] = "  {$loan['name']}: {$loan['type']}, {$loan['direction']}, Fortschritt {$loan['progressPercent']}%, Rate {$loan['monthlyPercent']}% vom Einkommen";
+            }
+            $lines[] = "  Gesamte monatliche Kreditbelastung: {$this->loanSummary['monthlyBurdenPercent']}% vom Einkommen";
         }
 
         return implode("\n", $lines);
