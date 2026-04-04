@@ -5,9 +5,14 @@ import StatCard from '@/Components/StatCard.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import AiInsightsCard from '@/Components/AiInsightsCard.vue';
 import { useFormatters } from '@/Composables/useFormatters.js';
+import { useTheme } from '@/Composables/useTheme.js';
 import { computed } from 'vue';
 
 const { formatCurrency, formatPercent } = useFormatters();
+const { isDark } = useTheme();
+
+const chartTextColor = computed(() => isDark.value ? '#9ca3af' : '#6b7280');
+const chartGridColor = computed(() => isDark.value ? '#374151' : '#e5e7eb');
 
 const props = defineProps({
     stats: {
@@ -24,14 +29,16 @@ const props = defineProps({
 const hasData = computed(() => props.monthlyData.length > 0);
 
 const monthlyChartOptions = computed(() => ({
-    chart: { type: 'bar', height: 300, toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
+    chart: { type: 'bar', height: 300, toolbar: { show: false }, fontFamily: 'Inter, sans-serif', background: 'transparent' },
+    theme: { mode: isDark.value ? 'dark' : 'light' },
     plotOptions: { bar: { columnWidth: '60%', borderRadius: 4 } },
     colors: ['#22c55e', '#ef4444'],
-    xaxis: { categories: props.monthlyData.map(d => d.month) },
-    yaxis: { labels: { formatter: (v) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v) } },
+    xaxis: { categories: props.monthlyData.map(d => d.month), labels: { style: { colors: chartTextColor.value } } },
+    yaxis: { labels: { style: { colors: chartTextColor.value }, formatter: (v) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v) } },
+    grid: { borderColor: chartGridColor.value },
     dataLabels: { enabled: false },
-    legend: { position: 'top' },
-    tooltip: { y: { formatter: (v) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(v) } },
+    legend: { position: 'top', labels: { colors: chartTextColor.value } },
+    tooltip: { theme: isDark.value ? 'dark' : 'light', y: { formatter: (v) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(v) } },
 }));
 
 const monthlySeries = computed(() => [
@@ -40,25 +47,28 @@ const monthlySeries = computed(() => [
 ]);
 
 const categoryChartOptions = computed(() => ({
-    chart: { type: 'donut', height: 300, fontFamily: 'Inter, sans-serif' },
+    chart: { type: 'donut', height: 300, fontFamily: 'Inter, sans-serif', background: 'transparent' },
+    theme: { mode: isDark.value ? 'dark' : 'light' },
     labels: props.categoryData.map(d => d.name),
     colors: ['#3b82f6', '#ef4444', '#f59e0b', '#22c55e', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16'],
-    legend: { position: 'bottom' },
-    tooltip: { y: { formatter: (v) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(v) } },
+    legend: { position: 'bottom', labels: { colors: chartTextColor.value } },
+    tooltip: { theme: isDark.value ? 'dark' : 'light', y: { formatter: (v) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(v) } },
     dataLabels: { enabled: false },
 }));
 
 const categorySeries = computed(() => props.categoryData.map(d => d.total));
 
 const balanceChartOptions = computed(() => ({
-    chart: { type: 'area', height: 300, toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
+    chart: { type: 'area', height: 300, toolbar: { show: false }, fontFamily: 'Inter, sans-serif', background: 'transparent' },
+    theme: { mode: isDark.value ? 'dark' : 'light' },
     colors: ['#3b82f6'],
-    xaxis: { categories: props.balanceData.map(d => d.month) },
-    yaxis: { labels: { formatter: (v) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v) } },
+    xaxis: { categories: props.balanceData.map(d => d.month), labels: { style: { colors: chartTextColor.value } } },
+    yaxis: { labels: { style: { colors: chartTextColor.value }, formatter: (v) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v) } },
+    grid: { borderColor: chartGridColor.value },
     dataLabels: { enabled: false },
     stroke: { curve: 'smooth', width: 2 },
     fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.05 } },
-    tooltip: { y: { formatter: (v) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(v) } },
+    tooltip: { theme: isDark.value ? 'dark' : 'light', y: { formatter: (v) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(v) } },
 }));
 
 const balanceSeries = computed(() => [

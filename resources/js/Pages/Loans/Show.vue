@@ -3,6 +3,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import StatCard from '@/Components/StatCard.vue';
 import { useFormatters } from '@/Composables/useFormatters.js';
+import { useTheme } from '@/Composables/useTheme.js';
 import { useForm, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import DataTable from 'primevue/datatable';
@@ -17,6 +18,10 @@ import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
 
 const { formatCurrency, formatDate, formatNumber } = useFormatters();
+const { isDark } = useTheme();
+
+const chartTextColor = computed(() => isDark.value ? '#9ca3af' : '#6b7280');
+const chartGridColor = computed(() => isDark.value ? '#374151' : '#e5e7eb');
 
 const props = defineProps({
     loan: { type: Object, required: true },
@@ -67,19 +72,22 @@ function paymentTypeLabel(type) {
 const hasSchedule = computed(() => props.summary?.schedule?.length > 0);
 
 const chartOptions = computed(() => ({
-    chart: { type: 'area', height: 300, toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
+    chart: { type: 'area', height: 300, toolbar: { show: false }, fontFamily: 'Inter, sans-serif', background: 'transparent' },
+    theme: { mode: isDark.value ? 'dark' : 'light' },
     colors: ['#3b82f6', '#ef4444'],
     xaxis: {
         categories: (props.summary?.schedule || []).filter((_, i) => i % 3 === 0).map(s => s.date.substring(0, 7)),
+        labels: { style: { colors: chartTextColor.value } },
     },
     yaxis: {
-        labels: { formatter: (v) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v) },
+        labels: { style: { colors: chartTextColor.value }, formatter: (v) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v) },
     },
+    grid: { borderColor: chartGridColor.value },
     dataLabels: { enabled: false },
     stroke: { curve: 'smooth', width: 2 },
     fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.05 } },
-    tooltip: { y: { formatter: (v) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(v) } },
-    legend: { position: 'top' },
+    tooltip: { theme: isDark.value ? 'dark' : 'light', y: { formatter: (v) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(v) } },
+    legend: { position: 'top', labels: { colors: chartTextColor.value } },
 }));
 
 const chartSeries = computed(() => [
