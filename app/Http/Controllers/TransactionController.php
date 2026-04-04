@@ -42,14 +42,27 @@ class TransactionController extends Controller
             $query->where('account_id', $request->account_id);
         }
 
-        $transactions = $query->orderByDesc('date')->orderByDesc('id')->paginate(25)->withQueryString();
+        $sortField = $request->input('sort_field', 'date');
+        $sortOrder = $request->input('sort_order', 'desc');
+
+        if (! in_array($sortField, ['date', 'amount', 'description'])) {
+            $sortField = 'date';
+        }
+
+        $query->orderBy($sortField, $sortOrder === 'asc' ? 'asc' : 'desc');
+        if ($sortField !== 'date') {
+            $query->orderByDesc('date');
+        }
+        $query->orderByDesc('id');
+
+        $transactions = $query->paginate(25)->withQueryString();
 
         $accounts = Account::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
 
         return Inertia::render('Transactions/Index', [
             'transactions' => $transactions,
             'categories' => Category::with('parent')->orderBy('name')->get(),
-            'filters' => $request->only(['search', 'category_id', 'date_from', 'date_to', 'type', 'account_id']),
+            'filters' => $request->only(['search', 'category_id', 'date_from', 'date_to', 'type', 'account_id', 'sort_field', 'sort_order']),
             'accounts' => $accounts,
         ]);
     }

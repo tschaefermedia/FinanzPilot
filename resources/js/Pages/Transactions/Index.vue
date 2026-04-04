@@ -24,11 +24,33 @@ const props = defineProps({
 const search = ref(props.filters.search || '');
 const accountFilter = ref(props.filters.account_id || null);
 
+const sortFieldMap = { date: 'date', amount: 'amount', description: 'description' };
+const sortField = ref(props.filters.sort_field || 'date');
+const sortOrder = ref(props.filters.sort_order === 'asc' ? 1 : -1);
+
+function buildParams(overrides = {}) {
+    return {
+        search: search.value || undefined,
+        account_id: accountFilter.value || undefined,
+        sort_field: sortField.value,
+        sort_order: sortOrder.value === 1 ? 'asc' : 'desc',
+        ...overrides,
+    };
+}
+
 function applySearch() {
-    router.get('/transactions', {
-        search: search.value,
-        account_id: accountFilter.value,
-    }, { preserveState: true, preserveScroll: true });
+    router.get('/transactions', buildParams({ page: undefined }), { preserveState: true, preserveScroll: true });
+}
+
+function onSort(event) {
+    const field = sortFieldMap[event.sortField] || event.sortField;
+    sortField.value = field;
+    sortOrder.value = event.sortOrder;
+    router.get('/transactions', buildParams({ page: undefined }), { preserveState: true, preserveScroll: true });
+}
+
+function onPage(event) {
+    router.get('/transactions', buildParams({ page: event.page + 1 }), { preserveState: true, preserveScroll: true });
 }
 
 function sourceLabel(source) {
@@ -73,6 +95,15 @@ function deleteTransaction(id) {
                 v-if="transactions.data && transactions.data.length > 0"
                 :value="transactions.data"
                 stripedRows
+                lazy
+                paginator
+                :rows="25"
+                :totalRecords="transactions.meta?.total ?? transactions.total ?? 0"
+                :first="((transactions.meta?.current_page ?? transactions.current_page ?? 1) - 1) * 25"
+                :sortField="sortField"
+                :sortOrder="sortOrder"
+                @sort="onSort"
+                @page="onPage"
                 class="text-sm"
             >
                 <Column field="date" header="Datum" sortable style="width: 120px">
