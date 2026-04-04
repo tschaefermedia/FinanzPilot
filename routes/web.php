@@ -49,6 +49,7 @@ Route::post('export/batch', [ExportController::class, 'exportBatch'])->name('exp
 // Settings
 Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
 Route::put('settings/ai', [SettingsController::class, 'updateAi'])->name('settings.updateAi');
+Route::delete('settings/clear-all', [SettingsController::class, 'clearAll'])->name('settings.clearAll');
 
 // AI Insights (JSON API for dashboard widget)
 Route::get('api/insights', [AiInsightsController::class, 'index'])->name('api.insights');

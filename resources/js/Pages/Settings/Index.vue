@@ -1,11 +1,13 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import Password from 'primevue/password';
+import Dialog from 'primevue/dialog';
 
 const props = defineProps({
     settings: { type: Object, default: () => ({}) },
@@ -42,6 +44,21 @@ function onProviderChange() {
 
 function submit() {
     form.put('/settings/ai');
+}
+
+const showClearDialog = ref(false);
+const clearConfirmation = ref('');
+const clearProcessing = ref(false);
+
+function clearAll() {
+    clearProcessing.value = true;
+    router.delete('/settings/clear-all', {
+        onFinish: () => {
+            clearProcessing.value = false;
+            showClearDialog.value = false;
+            clearConfirmation.value = '';
+        },
+    });
 }
 </script>
 
@@ -97,6 +114,24 @@ function submit() {
                     </div>
                 </form>
             </div>
+            <!-- Danger Zone -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-red-200 dark:border-red-800 p-6 mt-6">
+                <h3 class="text-lg font-semibold text-red-600 dark:text-red-400 mb-1">Gefahrenzone</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Alle Finanzdaten unwiderruflich löschen: Buchungen, Konten, Kategorien, Darlehen, Importe und Daueraufträge.</p>
+                <Button label="Alle Daten löschen" icon="pi pi-trash" severity="danger" outlined @click="showClearDialog = true" />
+            </div>
+
+            <Dialog v-model:visible="showClearDialog" header="Alle Daten löschen?" modal :style="{ width: '28rem' }">
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                    Diese Aktion löscht <strong>alle Finanzdaten unwiderruflich</strong>. Einstellungen und Import-Mappings bleiben erhalten.
+                </p>
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-2">Tippe <strong>LÖSCHEN</strong> zur Bestätigung:</p>
+                <InputText v-model="clearConfirmation" class="w-full" placeholder="LÖSCHEN" />
+                <template #footer>
+                    <Button label="Abbrechen" text @click="showClearDialog = false; clearConfirmation = ''" />
+                    <Button label="Endgültig löschen" icon="pi pi-trash" severity="danger" :disabled="clearConfirmation !== 'LÖSCHEN'" :loading="clearProcessing" @click="clearAll" />
+                </template>
+            </Dialog>
         </div>
     </AppLayout>
 </template>

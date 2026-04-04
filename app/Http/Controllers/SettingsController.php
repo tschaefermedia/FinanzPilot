@@ -2,8 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Account;
+use App\Models\Category;
+use App\Models\CategoryRule;
+use App\Models\ImportBatch;
+use App\Models\Loan;
+use App\Models\LoanPayment;
+use App\Models\RecurringTemplate;
 use App\Models\Setting;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class SettingsController extends Controller
@@ -39,5 +48,21 @@ class SettingsController extends Controller
         Setting::set('ai_base_url', $validated['ai_base_url'] ?? '');
 
         return redirect()->back()->with('success', 'KI-Einstellungen gespeichert.');
+    }
+
+    public function clearAll()
+    {
+        DB::transaction(function () {
+            LoanPayment::query()->forceDelete();
+            Loan::query()->forceDelete();
+            CategoryRule::query()->delete();
+            Transaction::query()->forceDelete();
+            RecurringTemplate::query()->delete();
+            ImportBatch::query()->delete();
+            Category::query()->forceDelete();
+            Account::query()->forceDelete();
+        });
+
+        return redirect()->back()->with('success', 'Alle Daten wurden gelöscht.');
     }
 }

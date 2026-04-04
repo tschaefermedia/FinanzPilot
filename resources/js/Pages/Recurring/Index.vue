@@ -72,7 +72,7 @@ function openEdit(template) {
     form.amount = parseFloat(template.amount);
     form.category_id = template.category_id;
     form.frequency = template.frequency;
-    form.next_due_date = new Date(template.next_due_date + 'T00:00:00');
+    form.next_due_date = new Date(template.next_due_date);
     form.is_active = template.is_active;
     form.auto_generate = template.auto_generate;
     form.account_id = template.account_id;

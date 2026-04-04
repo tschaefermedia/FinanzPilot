@@ -108,6 +108,7 @@ function isSelected(id) {
                 <Column header="Kategorie" style="width: 220px">
                     <template #body="{ data }">
                         <TreeSelect
+                            :key="data.id"
                             :modelValue="null"
                             @update:modelValue="(val) => categorize(data.id, val)"
                             :options="categories"
