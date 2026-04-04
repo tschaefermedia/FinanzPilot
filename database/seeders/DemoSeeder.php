@@ -92,7 +92,7 @@ class DemoSeeder extends Seeder
             // Salary — income
             $salaryBase = $m < 6 ? 3850.00 : 3650.00; // raise 6 months ago
             $salary = $salaryBase + rand(-20, 20);
-            $this->tx($checking, $month->copy()->day(28), $salary, 'Gehalt ' . $month->translatedFormat('F Y'), 'Arbeitgeber GmbH', $cat('Gehalt'), 'recurring');
+            $this->tx($checking, $month->copy()->day(28), $salary, 'Gehalt '.$month->translatedFormat('F Y'), 'Arbeitgeber GmbH', $cat('Gehalt'), 'recurring');
 
             // Side income — roughly every other month
             if ($m % 2 === 0) {
@@ -104,7 +104,7 @@ class DemoSeeder extends Seeder
 
             // Utilities — quarterly in Jan, Apr, Jul, Oct
             if (in_array($month->month, [1, 4, 7, 10])) {
-                $this->tx($checking, $month->copy()->day(15), -rand(180, 240) * 1.0, 'Nebenkosten Q' . ceil($month->month / 3), 'Hausverwaltung Schmidt', $cat('Nebenkosten'));
+                $this->tx($checking, $month->copy()->day(15), -rand(180, 240) * 1.0, 'Nebenkosten Q'.ceil($month->month / 3), 'Hausverwaltung Schmidt', $cat('Nebenkosten'));
             }
 
             // Electricity
@@ -121,7 +121,7 @@ class DemoSeeder extends Seeder
                 $day = min(rand(1, $daysInMonth), $daysInMonth);
                 $amount = -(rand(1200, 8500) / 100);
                 $acct = $i % 3 === 0 ? $credit : ($i % 5 === 0 ? $cash : $checking);
-                $this->tx($acct, $month->copy()->day($day), $amount, $store . ' Einkauf', $store, $cat('Supermarkt'));
+                $this->tx($acct, $month->copy()->day($day), $amount, $store.' Einkauf', $store, $cat('Supermarkt'));
             }
 
             // Restaurants — 2-4 per month
@@ -143,7 +143,7 @@ class DemoSeeder extends Seeder
             // Fuel — 1-2 per month
             for ($i = 0; $i < rand(1, 2); $i++) {
                 $day = min(rand(1, $daysInMonth), $daysInMonth);
-                $this->tx($credit, $month->copy()->day($day), -(rand(5500, 8500) / 100), 'Tankstelle ' . ['Aral', 'Shell', 'Total'][rand(0, 2)], null, $cat('Tanken'));
+                $this->tx($credit, $month->copy()->day($day), -(rand(5500, 8500) / 100), 'Tankstelle '.['Aral', 'Shell', 'Total'][rand(0, 2)], null, $cat('Tanken'));
             }
 
             // Health — occasional
@@ -186,8 +186,8 @@ class DemoSeeder extends Seeder
 
             // Savings transfer — monthly
             $savingsAmount = $m < 6 ? 500.00 : 400.00;
-            $this->tx($checking, $month->copy()->day(29 > $daysInMonth ? $daysInMonth : 29), -$savingsAmount, 'Sparplan Tagesgeld', null, $cat('Tagesgeld'));
-            $this->tx($savings, $month->copy()->day(29 > $daysInMonth ? $daysInMonth : 29), $savingsAmount, 'Eingang Sparplan', null, $cat('Tagesgeld'));
+            $this->tx($checking, $month->copy()->day($daysInMonth < 29 ? $daysInMonth : 29), -$savingsAmount, 'Sparplan Tagesgeld', null, $cat('Tagesgeld'));
+            $this->tx($savings, $month->copy()->day($daysInMonth < 29 ? $daysInMonth : 29), $savingsAmount, 'Eingang Sparplan', null, $cat('Tagesgeld'));
 
             // ETF savings plan
             $this->tx($checking, $month->copy()->day(15), -250.00, 'ETF Sparplan MSCI World', 'Scalable Capital', $cat('ETF'), 'recurring');
