@@ -9,90 +9,47 @@
 
 ## Option A: Deploy with Pre-built Image (Recommended)
 
-The fastest way to deploy. Uses the pre-built image from GitHub Container Registry — no build step needed.
+The fastest way to deploy. Uses the pre-built image from GitHub Container Registry — no build step needed. The repository includes a ready-to-use `docker-compose.prod.yml`.
 
-### 1. Create a project directory
+### 1. Clone (or download) the repository
 
 ```bash
-mkdir finanzpilot && cd finanzpilot
+git clone https://github.com/tschaefermedia/FinanzPilot.git
+cd financial-pilot
 ```
 
-### 2. Create docker-compose.yml
+### 2. Set your APP_KEY (recommended)
 
-```yaml
-services:
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-    volumes:
-      - app-data:/var/www/html
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-    depends_on:
-      - php
+> **Important:** The entrypoint auto-generates an `APP_KEY` on first start, but it only persists inside the Docker volume. If the volume is ever pruned, sessions and encrypted data become unreadable. For production, set it explicitly:
 
-  php:
-    image: ghcr.io/tschaefermedia/finanzpilot:latest
-    volumes:
-      - app-data:/var/www/html
-      - ./database:/var/www/html/database
-    environment:
-      - APP_NAME=FinanzPilot
-      - APP_ENV=production
-      - APP_DEBUG=false
-      - APP_URL=https://your-domain.example.com
-      - SESSION_DRIVER=file
-      - CACHE_STORE=file
-      - QUEUE_CONNECTION=sync
+```bash
+# Generate a key
+php -r "echo 'base64:'.base64_encode(random_bytes(32)).PHP_EOL;"
 
-volumes:
-  app-data:
+# Add it to docker-compose.prod.yml under php → environment:
+#   - APP_KEY=base64:your-generated-key
 ```
 
-### 3. Create nginx.conf
-
-```nginx
-server {
-    listen 80;
-    server_name localhost;
-    root /var/www/html/public;
-    index index.php;
-
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-
-    location ~ \.php$ {
-        fastcgi_pass php:9000;
-        fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        include fastcgi_params;
-    }
-}
-```
-
-### 4. Start
+### 3. Start
 
 ```bash
 mkdir -p database
-docker compose up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 On first start, the entrypoint automatically:
 - Creates `.env` from defaults
-- Generates the application key
+- Generates the application key (if not set via environment)
 - Runs database migrations and seeds categories
 - Sets all file permissions
 
 The app is now running at `http://<your-server-ip>`.
 
-That's it. Two files (`docker-compose.yml` + `nginx.conf`), one command.
-
 ### Updating to a new version
 
 ```bash
-docker compose pull
-docker compose up -d
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 Migrations run automatically on container start — no manual steps needed.
@@ -346,13 +303,13 @@ The project includes a `.mcp.json` file. If using from a different location, add
 
 ## Recurring Transactions Scheduler
 
-To auto-generate transactions from recurring templates, add the Laravel scheduler to the host's crontab:
+The Laravel scheduler runs automatically inside the container — no host-level cron needed. The entrypoint installs a cron job that runs `php artisan schedule:run` every minute, which triggers `recurring:generate` daily to create transactions from active recurring templates.
 
-```cron
-* * * * * cd /path/to/financial-pilot && docker compose exec -T php php artisan schedule:run >> /dev/null 2>&1
+Scheduler output is logged to `storage/logs/scheduler.log` inside the container:
+
+```bash
+docker compose exec php tail -50 storage/logs/scheduler.log
 ```
-
-This runs `recurring:generate` daily, creating transactions for all active templates with auto-generate enabled.
 
 ---
 
