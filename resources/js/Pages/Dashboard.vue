@@ -72,25 +72,25 @@ const balanceSeries = computed(() => [
 
         <!-- Account Overview -->
         <div v-if="accounts.length > 0" class="mb-8">
-            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6 mb-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-500">Gesamtvermögen</p>
-                        <p :class="['text-3xl font-bold', totalBalance >= 0 ? 'text-gray-900' : 'text-red-600']">
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Gesamtvermögen</p>
+                        <p :class="['text-3xl font-bold', totalBalance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600']">
                             {{ formatCurrency(totalBalance) }}
                         </p>
                     </div>
-                    <a href="/accounts" class="text-sm text-blue-600 hover:underline">Alle Konten →</a>
+                    <a href="/accounts" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">Alle Konten →</a>
                 </div>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 <div
                     v-for="account in accounts"
                     :key="account.id"
-                    class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 relative overflow-hidden"
+                    class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-4 relative overflow-hidden"
                 >
-                    <p class="text-xs font-medium text-gray-500 truncate">{{ account.name }}</p>
-                    <p :class="['text-lg font-bold mt-1', account.current_balance >= 0 ? 'text-gray-900' : 'text-red-600']">
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">{{ account.name }}</p>
+                    <p :class="['text-lg font-bold mt-1', account.current_balance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600']">
                         {{ formatCurrency(account.current_balance) }}
                     </p>
                     <div
@@ -111,17 +111,17 @@ const balanceSeries = computed(() => [
 
         <template v-if="hasData">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-                    <h3 class="text-sm font-semibold text-gray-700 mb-4">Einnahmen vs. Ausgaben</h3>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Einnahmen vs. Ausgaben</h3>
                     <apexchart type="bar" :options="monthlyChartOptions" :series="monthlySeries" height="300" />
                 </div>
-                <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-                    <h3 class="text-sm font-semibold text-gray-700 mb-4">Ausgaben nach Kategorie</h3>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Ausgaben nach Kategorie</h3>
                     <apexchart type="donut" :options="categoryChartOptions" :series="categorySeries" height="300" />
                 </div>
             </div>
-            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-                <h3 class="text-sm font-semibold text-gray-700 mb-4">Kontoverlauf</h3>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Kontoverlauf</h3>
                 <apexchart type="area" :options="balanceChartOptions" :series="balanceSeries" height="300" />
             </div>
             <div class="mt-6">

@@ -98,12 +98,12 @@ function deleteAccount(id) {
             <div
                 v-for="account in accounts"
                 :key="account.id"
-                class="bg-white rounded-lg shadow-sm border border-gray-100 p-5 relative"
+                class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-5 relative"
                 :class="{ 'opacity-50': !account.is_active }"
             >
                 <div class="flex items-start justify-between mb-3">
                     <div>
-                        <h3 class="text-base font-semibold text-gray-900">{{ account.name }}</h3>
+                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ account.name }}</h3>
                         <Tag :value="typeLabel(account.type)" :severity="typeSeverity(account.type)" class="mt-1" />
                     </div>
                     <div class="flex gap-1">
@@ -113,16 +113,16 @@ function deleteAccount(id) {
                 </div>
 
                 <div class="mt-4">
-                    <p class="text-sm text-gray-500">Aktueller Kontostand</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Aktueller Kontostand</p>
                     <p :class="[
                         'text-2xl font-bold',
-                        account.current_balance >= 0 ? 'text-gray-900' : 'text-red-600'
+                        account.current_balance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600'
                     ]">
                         {{ formatCurrency(account.current_balance) }}
                     </p>
                 </div>
 
-                <div class="mt-3 flex justify-between text-xs text-gray-400">
+                <div class="mt-3 flex justify-between text-xs text-gray-400 dark:text-gray-500">
                     <span>Startguthaben: {{ formatCurrency(account.starting_balance) }}</span>
                     <span>{{ account.transaction_count }} Buchungen</span>
                 </div>
@@ -139,30 +139,30 @@ function deleteAccount(id) {
         <Dialog v-model:visible="showDialog" :header="editingAccount ? 'Konto bearbeiten' : 'Neues Konto'" modal class="w-full max-w-md">
             <form @submit.prevent="submit" class="space-y-4 pt-2">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Name</label>
                     <InputText v-model="form.name" class="w-full" placeholder="z.B. Girokonto Sparkasse" />
                     <small v-if="form.errors.name" class="text-red-500">{{ form.errors.name }}</small>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Typ</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Typ</label>
                     <Select v-model="form.type" :options="typeOptions" optionLabel="label" optionValue="value" class="w-full" />
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Startguthaben</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Startguthaben</label>
                     <InputNumber v-model="form.starting_balance" mode="currency" currency="EUR" locale="de-DE" class="w-full" />
-                    <small class="text-gray-400">Kontostand zum Zeitpunkt der Einrichtung</small>
+                    <small class="text-gray-400 dark:text-gray-500">Kontostand zum Zeitpunkt der Einrichtung</small>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Farbe</label>
-                    <input type="color" v-model="form.color" class="w-10 h-10 rounded border border-gray-200 cursor-pointer" />
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Farbe</label>
+                    <input type="color" v-model="form.color" class="w-10 h-10 rounded border border-gray-200 dark:border-gray-700 cursor-pointer" />
                 </div>
 
                 <div class="flex items-center gap-2">
                     <ToggleSwitch v-model="form.is_active" />
-                    <label class="text-sm text-gray-700">Aktiv</label>
+                    <label class="text-sm text-gray-700 dark:text-gray-200">Aktiv</label>
                 </div>
 
                 <div class="flex justify-end gap-2 pt-2">

@@ -56,11 +56,11 @@ function sourceLabel(type) {
         </PageHeader>
 
         <!-- Upload area -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-8 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-8 mb-6">
             <div class="text-center">
-                <i class="pi pi-upload text-4xl text-gray-300 mb-4"></i>
-                <h3 class="text-lg font-semibold text-gray-700 mb-2">CSV-Datei importieren</h3>
-                <p class="text-sm text-gray-500 mb-4">Sparkasse CSV-CAMT oder andere CSV-Dateien</p>
+                <i class="pi pi-upload text-4xl text-gray-300 dark:text-gray-500 mb-4"></i>
+                <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">CSV-Datei importieren</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Sparkasse CSV-CAMT oder andere CSV-Dateien</p>
 
                 <label class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors">
                     <i class="pi pi-upload"></i>
@@ -69,8 +69,8 @@ function sourceLabel(type) {
                 </label>
 
                 <div v-if="form.processing" class="mt-4">
-                    <i class="pi pi-spin pi-spinner text-blue-600"></i>
-                    <span class="text-sm text-gray-500 ml-2">Datei wird verarbeitet...</span>
+                    <i class="pi pi-spin pi-spinner text-blue-600 dark:text-blue-400"></i>
+                    <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">Datei wird verarbeitet...</span>
                 </div>
 
                 <div v-if="form.errors.file" class="mt-2 text-red-500 text-sm">{{ form.errors.file }}</div>
@@ -78,9 +78,9 @@ function sourceLabel(type) {
         </div>
 
         <!-- Recent imports -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100">
-            <div class="px-6 py-4 border-b border-gray-100">
-                <h3 class="text-sm font-semibold text-gray-700">Letzte Importe</h3>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">Letzte Importe</h3>
             </div>
 
             <DataTable v-if="batches.length > 0" :value="batches" class="text-sm">

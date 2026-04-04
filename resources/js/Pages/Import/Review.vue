@@ -66,12 +66,12 @@ function isSelected(id) {
 <template>
     <AppLayout>
         <PageHeader title="Prüfwarteschlange">
-            <span class="text-sm text-gray-500 mr-4">{{ transactions.total ?? transactions.data?.length ?? 0 }} unkategorisiert</span>
+            <span class="text-sm text-gray-500 dark:text-gray-400 mr-4">{{ transactions.total ?? transactions.data?.length ?? 0 }} unkategorisiert</span>
         </PageHeader>
 
         <!-- Bulk actions -->
-        <div v-if="selectedIds.length > 0" class="bg-blue-50 rounded-lg border border-blue-200 p-4 mb-4 flex items-center gap-4">
-            <span class="text-sm font-medium text-blue-700">{{ selectedIds.length }} ausgewählt</span>
+        <div v-if="selectedIds.length > 0" class="bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700 p-4 mb-4 flex items-center gap-4">
+            <span class="text-sm font-medium text-blue-700 dark:text-blue-400">{{ selectedIds.length }} ausgewählt</span>
             <TreeSelect
                 v-model="bulkCategorySelection"
                 :options="categories"
@@ -82,7 +82,7 @@ function isSelected(id) {
             <Button label="Zuweisen" size="small" @click="bulkCategorize" :disabled="!bulkCategorySelection" />
         </div>
 
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
             <DataTable
                 v-if="transactions.data && transactions.data.length > 0"
                 :value="transactions.data"

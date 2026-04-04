@@ -79,7 +79,7 @@ function deleteCategory(id) {
             <Button label="Neue Kategorie" icon="pi pi-plus" size="small" @click="openCreate()" />
         </PageHeader>
 
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
             <TreeTable v-if="categories.length > 0" :value="categories" class="text-sm">
                 <Column field="name" header="Name" expander>
                     <template #body="{ node }">
@@ -93,7 +93,7 @@ function deleteCategory(id) {
                 </Column>
                 <Column field="transactionsCount" header="Buchungen" style="width: 120px">
                     <template #body="{ node }">
-                        <span class="text-gray-500">{{ node.data.transactionsCount ?? 0 }}</span>
+                        <span class="text-gray-500 dark:text-gray-400">{{ node.data.transactionsCount ?? 0 }}</span>
                     </template>
                 </Column>
                 <Column header="Aktionen" style="width: 150px">
@@ -112,13 +112,13 @@ function deleteCategory(id) {
         <Dialog v-model:visible="showDialog" :header="editingCategory ? 'Kategorie bearbeiten' : 'Neue Kategorie'" modal class="w-full max-w-md">
             <form @submit.prevent="submit" class="space-y-4 pt-2">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Name</label>
                     <InputText v-model="form.name" class="w-full" placeholder="Kategoriename" />
                     <small v-if="form.errors.name" class="text-red-500">{{ form.errors.name }}</small>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Typ</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Typ</label>
                     <Select v-model="form.type" :options="typeOptions" optionLabel="label" optionValue="value" class="w-full" />
                 </div>
 

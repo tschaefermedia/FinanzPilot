@@ -106,13 +106,13 @@ const chartSeries = computed(() => [
         </div>
 
         <!-- Payoff chart -->
-        <div v-if="hasSchedule" class="bg-white rounded-lg shadow-sm border border-gray-100 p-6 mb-6">
-            <h3 class="text-sm font-semibold text-gray-700 mb-4">Tilgungsverlauf</h3>
+        <div v-if="hasSchedule" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Tilgungsverlauf</h3>
             <apexchart type="area" :options="chartOptions" :series="chartSeries" height="300" />
         </div>
 
         <!-- Tabs: Payments + Schedule -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
             <TabView>
                 <TabPanel header="Zahlungen">
                     <DataTable v-if="loan.payments && loan.payments.length > 0" :value="loan.payments" class="text-sm">
@@ -129,12 +129,12 @@ const chartSeries = computed(() => [
                         </Column>
                         <Column header="Buchung" style="width: 200px">
                             <template #body="{ data }">
-                                <span v-if="data.transaction" class="text-xs text-gray-500">{{ data.transaction.description }}</span>
-                                <span v-else class="text-xs text-gray-400">Manuell</span>
+                                <span v-if="data.transaction" class="text-xs text-gray-500 dark:text-gray-400">{{ data.transaction.description }}</span>
+                                <span v-else class="text-xs text-gray-400 dark:text-gray-500">Manuell</span>
                             </template>
                         </Column>
                     </DataTable>
-                    <div v-else class="py-8 text-center text-gray-400 text-sm">Noch keine Zahlungen erfasst.</div>
+                    <div v-else class="py-8 text-center text-gray-400 dark:text-gray-500 text-sm">Noch keine Zahlungen erfasst.</div>
                 </TabPanel>
 
                 <TabPanel v-if="hasSchedule" header="Tilgungsplan">
@@ -164,15 +164,15 @@ const chartSeries = computed(() => [
         <Dialog v-model:visible="showPaymentDialog" header="Zahlung erfassen" modal class="w-full max-w-md">
             <form @submit.prevent="submitPayment" class="space-y-4 pt-2">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Datum</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Datum</label>
                     <DatePicker v-model="paymentForm.date" dateFormat="dd.mm.yy" showIcon class="w-full" />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Betrag</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Betrag</label>
                     <InputNumber v-model="paymentForm.amount" mode="currency" currency="EUR" locale="de-DE" class="w-full" />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Typ</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Typ</label>
                     <Select v-model="paymentForm.type" :options="paymentTypeOptions" optionLabel="label" optionValue="value" class="w-full" />
                 </div>
                 <div class="flex justify-end gap-2 pt-2">

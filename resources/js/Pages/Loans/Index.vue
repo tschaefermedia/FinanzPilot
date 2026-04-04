@@ -111,10 +111,10 @@ function typeLabel(type) {
         </PageHeader>
 
         <div v-if="loans.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div v-for="loan in loans" :key="loan.id" class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+            <div v-for="loan in loans" :key="loan.id" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
                 <div class="flex items-start justify-between mb-4">
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-900">{{ loan.name }}</h3>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ loan.name }}</h3>
                         <div class="flex gap-2 mt-1">
                             <Tag :value="typeLabel(loan.type)" :severity="loan.type === 'bank' ? 'info' : 'secondary'" />
                             <Tag :value="directionLabel(loan.direction)" :severity="loan.direction === 'owed_by_me' ? 'danger' : 'success'" />
@@ -131,25 +131,25 @@ function typeLabel(type) {
 
                 <div class="grid grid-cols-2 gap-4 text-sm mb-4">
                     <div>
-                        <span class="text-gray-500">Summe</span>
+                        <span class="text-gray-500 dark:text-gray-400">Summe</span>
                         <p class="font-semibold">{{ formatCurrency(loan.principal) }}</p>
                     </div>
                     <div v-if="loan.type === 'bank'">
-                        <span class="text-gray-500">Zinssatz</span>
+                        <span class="text-gray-500 dark:text-gray-400">Zinssatz</span>
                         <p class="font-semibold">{{ formatNumber(loan.interest_rate, 2) }} %</p>
                     </div>
                     <div>
-                        <span class="text-gray-500">Restbetrag</span>
+                        <span class="text-gray-500 dark:text-gray-400">Restbetrag</span>
                         <p class="font-semibold">{{ formatCurrency(loan.summary?.remainingBalance ?? loan.principal) }}</p>
                     </div>
                     <div v-if="loan.summary?.monthlyPayment">
-                        <span class="text-gray-500">Rate/Monat</span>
+                        <span class="text-gray-500 dark:text-gray-400">Rate/Monat</span>
                         <p class="font-semibold">{{ formatCurrency(loan.summary.monthlyPayment) }}</p>
                     </div>
                 </div>
 
                 <div v-if="loan.summary?.progressPercent !== undefined">
-                    <div class="flex justify-between text-xs text-gray-500 mb-1">
+                    <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                         <span>Fortschritt</span>
                         <span>{{ formatNumber(loan.summary.progressPercent, 1) }}%</span>
                     </div>
@@ -163,49 +163,49 @@ function typeLabel(type) {
         <Dialog v-model:visible="showDialog" :header="editingLoan ? 'Darlehen bearbeiten' : 'Neues Darlehen'" modal class="w-full max-w-lg">
             <form @submit.prevent="submit" class="space-y-4 pt-2">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Name</label>
                     <InputText v-model="form.name" class="w-full" placeholder="z.B. Autokredit, Schulden bei Max" />
                     <small v-if="form.errors.name" class="text-red-500">{{ form.errors.name }}</small>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Typ</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Typ</label>
                         <Select v-model="form.type" :options="typeOptions" optionLabel="label" optionValue="value" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Richtung</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Richtung</label>
                         <Select v-model="form.direction" :options="directionOptions" optionLabel="label" optionValue="value" class="w-full" />
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Betrag</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Betrag</label>
                     <InputNumber v-model="form.principal" mode="currency" currency="EUR" locale="de-DE" class="w-full" />
                 </div>
 
                 <div v-if="form.type === 'bank'" class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Zinssatz (%)</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Zinssatz (%)</label>
                         <InputNumber v-model="form.interest_rate" :minFractionDigits="2" :maxFractionDigits="2" suffix=" %" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Laufzeit (Monate)</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Laufzeit (Monate)</label>
                         <InputNumber v-model="form.term_months" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Zahltag</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Zahltag</label>
                         <InputNumber v-model="form.payment_day" :min="1" :max="31" class="w-full" />
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Startdatum</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Startdatum</label>
                     <DatePicker v-model="form.start_date" dateFormat="dd.mm.yy" showIcon class="w-full" />
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Notizen</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Notizen</label>
                     <Textarea v-model="form.notes" rows="2" class="w-full" />
                 </div>
 

@@ -58,10 +58,10 @@ function submit() {
     <AppLayout>
         <PageHeader :title="`Spalten zuordnen: ${fileName}`" />
 
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
             <!-- Saved mappings -->
             <div v-if="mappings.length > 0" class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Gespeicherte Zuordnung laden</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Gespeicherte Zuordnung laden</label>
                 <div class="flex gap-2 flex-wrap">
                     <Button
                         v-for="m in mappings"
@@ -78,27 +78,27 @@ function submit() {
             <form @submit.prevent="submit" class="space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Datum *</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Datum *</label>
                         <Select v-model="form.columns.date" :options="columnOptions" optionLabel="label" optionValue="value" placeholder="Spalte wählen" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Betrag *</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Betrag *</label>
                         <Select v-model="form.columns.amount" :options="columnOptions" optionLabel="label" optionValue="value" placeholder="Spalte wählen" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung *</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Beschreibung *</label>
                         <Select v-model="form.columns.description" :options="columnOptions" optionLabel="label" optionValue="value" placeholder="Spalte wählen" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Empfänger</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Empfänger</label>
                         <Select v-model="form.columns.counterparty" :options="columnOptions" optionLabel="label" optionValue="value" placeholder="Spalte wählen" class="w-full" showClear />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Referenz</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Referenz</label>
                         <Select v-model="form.columns.reference" :options="columnOptions" optionLabel="label" optionValue="value" placeholder="Spalte wählen" class="w-full" showClear />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Datumsformat</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Datumsformat</label>
                         <InputText v-model="form.date_format" class="w-full" placeholder="d.m.Y" />
                     </div>
                 </div>
@@ -106,11 +106,11 @@ function submit() {
                 <div class="flex items-center gap-4 pt-2">
                     <div class="flex items-center gap-2">
                         <Checkbox v-model="form.has_header" :binary="true" inputId="hasHeader" />
-                        <label for="hasHeader" class="text-sm text-gray-700">Erste Zeile ist Kopfzeile</label>
+                        <label for="hasHeader" class="text-sm text-gray-700 dark:text-gray-200">Erste Zeile ist Kopfzeile</label>
                     </div>
                     <div class="flex items-center gap-2">
                         <Checkbox v-model="form.save_mapping" :binary="true" inputId="saveMapping" />
-                        <label for="saveMapping" class="text-sm text-gray-700">Zuordnung speichern</label>
+                        <label for="saveMapping" class="text-sm text-gray-700 dark:text-gray-200">Zuordnung speichern</label>
                     </div>
                     <div v-if="form.save_mapping">
                         <InputText v-model="form.mapping_name" placeholder="Name der Zuordnung" class="w-48" />
@@ -124,22 +124,22 @@ function submit() {
         </div>
 
         <!-- Preview table -->
-        <div v-if="preview.length > 0" class="bg-white rounded-lg shadow-sm border border-gray-100">
-            <div class="px-6 py-4 border-b border-gray-100">
-                <h3 class="text-sm font-semibold text-gray-700">Dateivorschau (erste {{ dataRows.length }} Zeilen)</h3>
+        <div v-if="preview.length > 0" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">Dateivorschau (erste {{ dataRows.length }} Zeilen)</h3>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-xs">
-                    <thead class="bg-gray-50">
+                    <thead class="bg-gray-50 dark:bg-gray-900">
                         <tr>
-                            <th v-for="(h, i) in headers" :key="i" class="px-3 py-2 text-left font-medium text-gray-500">
+                            <th v-for="(h, i) in headers" :key="i" class="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">
                                 {{ i }}: {{ h }}
                             </th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(row, ri) in dataRows" :key="ri" class="border-t border-gray-100">
-                            <td v-for="(cell, ci) in row" :key="ci" class="px-3 py-2 text-gray-700 whitespace-nowrap">
+                        <tr v-for="(row, ri) in dataRows" :key="ri" class="border-t border-gray-100 dark:border-gray-700">
+                            <td v-for="(cell, ci) in row" :key="ci" class="px-3 py-2 text-gray-700 dark:text-gray-200 whitespace-nowrap">
                                 {{ cell }}
                             </td>
                         </tr>

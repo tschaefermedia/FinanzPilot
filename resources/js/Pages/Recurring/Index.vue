@@ -119,13 +119,13 @@ function generateNow(id) {
             <Button label="Neuer Dauerauftrag" icon="pi pi-plus" size="small" @click="openCreate" />
         </PageHeader>
 
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
             <DataTable v-if="templates.length > 0" :value="templates" class="text-sm">
                 <Column field="description" header="Beschreibung">
                     <template #body="{ data }">
                         <div>
                             <span class="font-medium">{{ data.description }}</span>
-                            <span v-if="!data.is_active" class="ml-2 text-xs text-gray-400">(inaktiv)</span>
+                            <span v-if="!data.is_active" class="ml-2 text-xs text-gray-400 dark:text-gray-500">(inaktiv)</span>
                         </div>
                     </template>
                 </Column>
@@ -139,7 +139,7 @@ function generateNow(id) {
                 <Column header="Kategorie" style="width: 140px">
                     <template #body="{ data }">
                         <Tag v-if="data.category" :value="data.category.name" severity="info" />
-                        <span v-else class="text-gray-400 text-xs">—</span>
+                        <span v-else class="text-gray-400 dark:text-gray-500 text-xs">—</span>
                     </template>
                 </Column>
                 <Column field="frequency" header="Frequenz" style="width: 130px">
@@ -150,13 +150,13 @@ function generateNow(id) {
                 </Column>
                 <Column header="Auto" style="width: 60px">
                     <template #body="{ data }">
-                        <i :class="data.auto_generate ? 'pi pi-check-circle text-green-500' : 'pi pi-circle text-gray-300'" />
+                        <i :class="data.auto_generate ? 'pi pi-check-circle text-green-500' : 'pi pi-circle text-gray-300 dark:text-gray-500'" />
                     </template>
                 </Column>
                 <Column header="Konto" style="width: 130px">
                     <template #body="{ data }">
-                        <span v-if="data.account" class="text-xs text-gray-500">{{ data.account.name }}</span>
-                        <span v-else class="text-gray-300 text-xs">—</span>
+                        <span v-if="data.account" class="text-xs text-gray-500 dark:text-gray-400">{{ data.account.name }}</span>
+                        <span v-else class="text-gray-300 dark:text-gray-500 text-xs">—</span>
                     </template>
                 </Column>
                 <Column header="Aktionen" style="width: 150px">
@@ -175,24 +175,24 @@ function generateNow(id) {
         <Dialog v-model:visible="showDialog" :header="editingTemplate ? 'Dauerauftrag bearbeiten' : 'Neuer Dauerauftrag'" modal class="w-full max-w-lg">
             <form @submit.prevent="submit" class="space-y-4 pt-2">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Beschreibung</label>
                     <InputText v-model="form.description" class="w-full" placeholder="z.B. Miete, Netflix, Gehalt" />
                     <small v-if="form.errors.description" class="text-red-500">{{ form.errors.description }}</small>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Betrag</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Betrag</label>
                     <InputNumber v-model="form.amount" mode="currency" currency="EUR" locale="de-DE" class="w-full" />
-                    <small class="text-gray-400">Positiv = Einnahme, Negativ = Ausgabe</small>
+                    <small class="text-gray-400 dark:text-gray-500">Positiv = Einnahme, Negativ = Ausgabe</small>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Kategorie</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Kategorie</label>
                     <TreeSelect v-model="selectedCategory" :options="categories" placeholder="Kategorie wählen" class="w-full" selectionMode="single" />
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Konto</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Konto</label>
                     <Select
                         v-model="form.account_id"
                         :options="accounts"
@@ -206,11 +206,11 @@ function generateNow(id) {
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Frequenz</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Frequenz</label>
                         <Select v-model="form.frequency" :options="frequencyOptions" optionLabel="label" optionValue="value" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Nächste Fälligkeit</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Nächste Fälligkeit</label>
                         <DatePicker v-model="form.next_due_date" dateFormat="dd.mm.yy" showIcon class="w-full" />
                     </div>
                 </div>
@@ -218,11 +218,11 @@ function generateNow(id) {
                 <div class="flex items-center gap-6 pt-2">
                     <div class="flex items-center gap-2">
                         <ToggleSwitch v-model="form.is_active" />
-                        <label class="text-sm text-gray-700">Aktiv</label>
+                        <label class="text-sm text-gray-700 dark:text-gray-200">Aktiv</label>
                     </div>
                     <div class="flex items-center gap-2">
                         <ToggleSwitch v-model="form.auto_generate" />
-                        <label class="text-sm text-gray-700">Automatisch erstellen</label>
+                        <label class="text-sm text-gray-700 dark:text-gray-200">Automatisch erstellen</label>
                     </div>
                 </div>
 

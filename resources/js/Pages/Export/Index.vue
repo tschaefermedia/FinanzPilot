@@ -137,11 +137,11 @@ function downloadPost(url, data, onDone) {
             <TabView>
                 <!-- Single month -->
                 <TabPanel header="Einzelner Monat">
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-                        <p class="text-sm text-gray-600 mb-4">Wähle einen Monat für den Export als Excel-Datei.</p>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                        <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">Wähle einen Monat für den Export als Excel-Datei.</p>
                         <div class="flex items-end gap-4">
                             <div class="w-64">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Monat</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Monat</label>
                                 <Select v-model="selectedMonth" :options="monthOptions" optionLabel="label" optionValue="value" class="w-full" />
                             </div>
                             <Button
@@ -157,15 +157,15 @@ function downloadPost(url, data, onDone) {
 
                 <!-- Date range -->
                 <TabPanel header="Zeitraum">
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-                        <p class="text-sm text-gray-600 mb-4">Wähle einen beliebigen Zeitraum für den Export.</p>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                        <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">Wähle einen beliebigen Zeitraum für den Export.</p>
                         <div class="flex items-end gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Von</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Von</label>
                                 <DatePicker v-model="dateFrom" dateFormat="dd.mm.yy" showIcon class="w-48" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Bis</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Bis</label>
                                 <DatePicker v-model="dateTo" dateFormat="dd.mm.yy" showIcon class="w-48" />
                             </div>
                             <Button
@@ -181,8 +181,8 @@ function downloadPost(url, data, onDone) {
 
                 <!-- Batch export -->
                 <TabPanel header="Batch-Export">
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-                        <p class="text-sm text-gray-600 mb-4">Wähle mehrere Monate. Jeder Monat wird als eigenes Blatt in einer Datei exportiert.</p>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                        <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">Wähle mehrere Monate. Jeder Monat wird als eigenes Blatt in einer Datei exportiert.</p>
                         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-6">
                             <div
                                 v-for="opt in monthOptions"
@@ -190,8 +190,8 @@ function downloadPost(url, data, onDone) {
                                 :class="[
                                     'flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors',
                                     selectedBatchMonths.includes(opt.value)
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-200 hover:border-gray-300'
+                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                                 ]"
                                 @click="toggleBatchMonth(opt.value)"
                             >

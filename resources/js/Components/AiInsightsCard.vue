@@ -47,9 +47,9 @@ function formatInsights(text) {
 </script>
 
 <template>
-    <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="text-sm font-semibold text-gray-700">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">
                 <i class="pi pi-sparkles text-purple-500 mr-1"></i>
                 KI-Analyse
             </h3>
@@ -64,20 +64,20 @@ function formatInsights(text) {
             />
         </div>
 
-        <div v-if="loading" class="flex items-center gap-2 text-sm text-gray-400 py-4">
+        <div v-if="loading" class="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 py-4">
             <i class="pi pi-spin pi-spinner"></i>
             <span>Analyse wird geladen...</span>
         </div>
 
-        <div v-else-if="error" class="text-sm text-gray-400 py-4">
+        <div v-else-if="error" class="text-sm text-gray-400 dark:text-gray-500 py-4">
             <p>{{ error }}</p>
             <a v-if="!enabled" href="/settings" class="text-blue-500 hover:underline text-xs mt-2 inline-block">
                 Zu den Einstellungen →
             </a>
         </div>
 
-        <div v-else-if="insights" class="prose prose-sm max-w-none text-gray-700">
-            <pre class="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">{{ formatInsights(insights) }}</pre>
+        <div v-else-if="insights" class="prose prose-sm max-w-none text-gray-700 dark:text-gray-200">
+            <pre class="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200 font-sans leading-relaxed">{{ formatInsights(insights) }}</pre>
         </div>
     </div>
 </template>

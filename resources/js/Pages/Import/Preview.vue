@@ -105,22 +105,22 @@ function commitImport() {
 
         <!-- Stats bar -->
         <div class="grid grid-cols-3 gap-4 mb-6">
-            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 text-center">
-                <p class="text-2xl font-bold text-gray-900">{{ totalCount }}</p>
-                <p class="text-sm text-gray-500">Gesamt</p>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-4 text-center">
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ totalCount }}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Gesamt</p>
             </div>
-            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 text-center">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-4 text-center">
                 <p class="text-2xl font-bold text-orange-500">{{ duplicateCount }}</p>
-                <p class="text-sm text-gray-500">Duplikate</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Duplikate</p>
             </div>
-            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 text-center">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-4 text-center">
                 <p class="text-2xl font-bold text-green-600">{{ categorizedCount }}</p>
-                <p class="text-sm text-gray-500">Kategorisiert</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Kategorisiert</p>
             </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mb-6 flex items-center gap-4">
-            <label class="text-sm font-medium text-gray-700">Importieren in Konto:</label>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-6 flex items-center gap-4">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-200">Importieren in Konto:</label>
             <Select
                 v-model="selectedAccountId"
                 :options="accounts"
@@ -133,7 +133,7 @@ function commitImport() {
         </div>
 
         <!-- Transaction table -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
             <DataTable :value="localTransactions" class="text-sm" scrollable scrollHeight="600px">
                 <Column style="width: 50px" header="">
                     <template #header>

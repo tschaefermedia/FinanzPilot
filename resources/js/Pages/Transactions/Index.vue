@@ -51,8 +51,8 @@ function deleteTransaction(id) {
             </Link>
         </PageHeader>
 
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100">
-            <div class="p-4 border-b border-gray-100">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700">
                 <div class="flex gap-3">
                     <InputText v-model="search" placeholder="Suchen..." class="w-full max-w-sm" @keyup.enter="applySearch" />
                     <Select
@@ -90,18 +90,18 @@ function deleteTransaction(id) {
                 <Column field="category.name" header="Kategorie" style="width: 150px">
                     <template #body="{ data }">
                         <Tag v-if="data.category" :value="data.category.name" severity="info" />
-                        <span v-else class="text-gray-400 text-xs">—</span>
+                        <span v-else class="text-gray-400 dark:text-gray-500 text-xs">—</span>
                     </template>
                 </Column>
                 <Column field="source" header="Quelle" style="width: 120px">
                     <template #body="{ data }">
-                        <span class="text-gray-500 text-xs">{{ sourceLabel(data.source) }}</span>
+                        <span class="text-gray-500 dark:text-gray-400 text-xs">{{ sourceLabel(data.source) }}</span>
                     </template>
                 </Column>
                 <Column header="Konto" style="width: 130px">
                     <template #body="{ data }">
-                        <span v-if="data.account" class="text-xs text-gray-500">{{ data.account.name }}</span>
-                        <span v-else class="text-gray-300 text-xs">—</span>
+                        <span v-if="data.account" class="text-xs text-gray-500 dark:text-gray-400">{{ data.account.name }}</span>
+                        <span v-else class="text-gray-300 dark:text-gray-500 text-xs">—</span>
                     </template>
                 </Column>
                 <Column style="width: 100px">

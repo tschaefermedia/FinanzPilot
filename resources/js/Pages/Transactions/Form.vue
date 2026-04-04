@@ -59,16 +59,16 @@ function formatDateForSubmit(date) {
     <AppLayout>
         <PageHeader :title="isEditing ? 'Buchung bearbeiten' : 'Neue Buchung'" />
 
-        <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6 max-w-2xl">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6 max-w-2xl">
             <form @submit.prevent="submit" class="space-y-5">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Datum</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Datum</label>
                     <DatePicker v-model="form.date" dateFormat="dd.mm.yy" showIcon class="w-full" />
                     <small v-if="form.errors.date" class="text-red-500">{{ form.errors.date }}</small>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Konto</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Konto</label>
                     <Select
                         v-model="form.account_id"
                         :options="accounts"
@@ -81,31 +81,31 @@ function formatDateForSubmit(date) {
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Betrag</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Betrag</label>
                     <InputNumber v-model="form.amount" mode="currency" currency="EUR" locale="de-DE" class="w-full" placeholder="0,00" />
-                    <small class="text-gray-400">Positiv = Einnahme, Negativ = Ausgabe</small>
+                    <small class="text-gray-400 dark:text-gray-500">Positiv = Einnahme, Negativ = Ausgabe</small>
                     <br v-if="form.errors.amount" />
                     <small v-if="form.errors.amount" class="text-red-500">{{ form.errors.amount }}</small>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Beschreibung</label>
                     <InputText v-model="form.description" class="w-full" placeholder="z.B. Einkauf REWE" />
                     <small v-if="form.errors.description" class="text-red-500">{{ form.errors.description }}</small>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Empfänger / Auftraggeber</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Empfänger / Auftraggeber</label>
                     <InputText v-model="form.counterparty" class="w-full" placeholder="z.B. REWE Markt GmbH" />
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Kategorie</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Kategorie</label>
                     <TreeSelect v-model="selectedCategory" :options="categories" placeholder="Kategorie wählen" class="w-full" selectionMode="single" />
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Notizen</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Notizen</label>
                     <Textarea v-model="form.notes" rows="3" class="w-full" placeholder="Optionale Notizen..." />
                 </div>
 
