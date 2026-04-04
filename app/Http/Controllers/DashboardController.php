@@ -4,14 +4,39 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\Transaction;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
-    public function __invoke()
+    public function __invoke(Request $request)
     {
-        $currentMonth = now()->format('Y-m');
+        $now = now()->format('Y-m');
+        $selectedMonth = $request->query('month');
+
+        if (! $selectedMonth || ! preg_match('/^\d{4}-\d{2}$/', $selectedMonth)) {
+            $selectedMonth = $now;
+        }
+
+        $firstMonth = Transaction::selectRaw("strftime('%Y-%m', MIN(date)) as m")->value('m');
+        $lastMonth = Transaction::selectRaw("strftime('%Y-%m', MAX(date)) as m")->value('m');
+
+        if (! $firstMonth) {
+            $firstMonth = $now;
+            $lastMonth = $now;
+        }
+
+        if ($lastMonth > $now) {
+            $lastMonth = $now;
+        }
+
+        $selectedDate = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
+        $prevMonth = $selectedMonth > $firstMonth ? $selectedDate->copy()->subMonth()->format('Y-m') : null;
+        $nextMonth = $selectedMonth < $lastMonth ? $selectedDate->copy()->addMonth()->format('Y-m') : null;
+
+        $currentMonth = $selectedMonth;
 
         $monthlyData = Transaction::selectRaw("
                 strftime('%Y-%m', date) as month,
@@ -66,6 +91,9 @@ class DashboardController extends Controller
         $totalBalance = $accounts->sum('current_balance');
 
         return Inertia::render('Dashboard', [
+            'selectedMonth' => $selectedMonth,
+            'prevMonth' => $prevMonth,
+            'nextMonth' => $nextMonth,
             'accounts' => $accounts,
             'totalBalance' => round($totalBalance, 2),
             'stats' => [

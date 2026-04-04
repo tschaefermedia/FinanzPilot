@@ -7,6 +7,8 @@ import AiInsightsCard from '@/Components/AiInsightsCard.vue';
 import { useFormatters } from '@/Composables/useFormatters.js';
 import { useTheme } from '@/Composables/useTheme.js';
 import { computed } from 'vue';
+import { router } from '@inertiajs/vue3';
+import Button from 'primevue/button';
 
 const { formatCurrency, formatPercent } = useFormatters();
 const { isDark } = useTheme();
@@ -15,6 +17,9 @@ const chartTextColor = computed(() => isDark.value ? '#9ca3af' : '#6b7280');
 const chartGridColor = computed(() => isDark.value ? '#374151' : '#e5e7eb');
 
 const props = defineProps({
+    selectedMonth: { type: String, default: '' },
+    prevMonth: { type: String, default: null },
+    nextMonth: { type: String, default: null },
     stats: {
         type: Object,
         default: () => ({ income: 0, expenses: 0, balance: 0, savingsRate: 0 }),
@@ -25,6 +30,16 @@ const props = defineProps({
     accounts: { type: Array, default: () => [] },
     totalBalance: { type: Number, default: 0 },
 });
+
+const monthLabel = computed(() => {
+    if (!props.selectedMonth) return '';
+    const [year, month] = props.selectedMonth.split('-');
+    return new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1));
+});
+
+function navigateMonth(month) {
+    router.get('/', { month }, { preserveState: true });
+}
 
 const hasData = computed(() => props.monthlyData.length > 0);
 
@@ -110,6 +125,12 @@ const balanceSeries = computed(() => [
                     />
                 </div>
             </div>
+        </div>
+
+        <div class="flex items-center justify-center gap-3 mb-6">
+            <Button icon="pi pi-chevron-left" text rounded size="small" :disabled="!prevMonth" @click="prevMonth && navigateMonth(prevMonth)" />
+            <span class="text-lg font-semibold text-gray-900 dark:text-white min-w-[10rem] text-center">{{ monthLabel }}</span>
+            <Button icon="pi pi-chevron-right" text rounded size="small" :disabled="!nextMonth" @click="nextMonth && navigateMonth(nextMonth)" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
