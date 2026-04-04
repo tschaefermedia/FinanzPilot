@@ -1,0 +1,42 @@
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - app-data:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      php:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - finanzpilot
+
+  php:
+    image: ghcr.io/tschaefermedia/finanzpilot:latest
+    volumes:
+      - app-data:/var/www/html
+      - ./database.sqlite:/var/www/html/database/database.sqlite
+    environment:
+      - APP_NAME=FinanzPilot
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_URL=http://localhost
+      # Recommended: set APP_KEY explicitly so it persists across container recreations
+      # Generate with: php -r "echo 'base64:'.base64_encode(random_bytes(32)).PHP_EOL;"
+      # - APP_KEY=base64:your-key-here
+      - SESSION_DRIVER=file
+      - CACHE_STORE=file
+      - QUEUE_CONNECTION=sync
+      - LOG_LEVEL=error
+    restart: unless-stopped
+    networks:
+      - finanzpilot
+
+volumes:
+  app-data:
+
+networks:
+  finanzpilot:
+    driver: bridge

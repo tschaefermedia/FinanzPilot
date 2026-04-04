@@ -52,9 +52,22 @@ touch /var/www/html/database/database.sqlite
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database /var/www/html/.env
 
 # Run migrations
-php /var/www/html/artisan migrate --force --no-interaction 2>/dev/null || true
+echo "Running database migrations..."
+php /var/www/html/artisan migrate --force --no-interaction
+if [ $? -ne 0 ]; then
+    echo "WARNING: Database migrations failed. The application may not work correctly."
+fi
 
-# Seed if database is empty (no categories = fresh install)
-php /var/www/html/artisan db:seed --no-interaction --force 2>/dev/null || true
+# Seed only on fresh install (no categories exist yet)
+CATEGORY_COUNT=$(php /var/www/html/artisan tinker --execute="echo \App\Models\Category::count();" 2>/dev/null | tr -d '[:space:]')
+if [ "$CATEGORY_COUNT" = "0" ] || [ -z "$CATEGORY_COUNT" ]; then
+    echo "Fresh install detected — seeding default categories..."
+    php /var/www/html/artisan db:seed --no-interaction --force
+fi
+
+# Set up Laravel scheduler cron job
+echo "* * * * * cd /var/www/html && php artisan schedule:run >> /var/www/html/storage/logs/scheduler.log 2>&1" | crontab -u www-data -
+echo "Starting cron daemon for Laravel scheduler..."
+cron
 
 exec "$@"

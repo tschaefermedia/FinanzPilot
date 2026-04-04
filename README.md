@@ -2,8 +2,11 @@
 
 Self-hosted personal finance web application. Track income, expenses, bank imports, recurring transactions, loans, and get AI-powered insights — all without relying on third-party SaaS.
 
+![Dashboard](docs/overview.png)
+
 ## Features
 
+- **Dashboard** — Income vs. expenses, category breakdown, balance trends, account overview
 - **Transaction tracking** — Manual entry and CSV import (Sparkasse, PayPal, generic CSV)
 - **Smart categorization** — Self-learning rule engine that improves with each manual categorization
 - **Multiple accounts** — Track checking, savings, credit card, and cash accounts separately
@@ -12,7 +15,26 @@ Self-hosted personal finance web application. Track income, expenses, bank impor
 - **Excel export** — German-formatted .xlsx files for tax advisors
 - **AI insights** — Privacy-first financial analysis (data is anonymized before sending)
 - **MCP server** — Query your finances from Claude Code or Claude Desktop
-- **Dashboard** — Income vs. expenses, category breakdown, balance trends, account overview
+
+<details>
+<summary>More screenshots</summary>
+
+### Transactions
+![Transactions](docs/transactions.png)
+
+### Accounts
+![Accounts](docs/accounts.png)
+
+### Recurring Transactions
+![Recurring Transactions](docs/recurring.png)
+
+### Loans
+![Loans](docs/loans.png)
+
+### AI Insights
+![AI Insights](docs/ai.png)
+
+</details>
 
 ## Tech Stack
 
