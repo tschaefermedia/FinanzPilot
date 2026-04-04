@@ -11,7 +11,7 @@
 If you discover a security vulnerability, please report it responsibly:
 
 1. **Do not** open a public issue
-2. Email security concerns to: tobias@buildit-consulting.de
+2. Email security concerns to: me@tobias-schaefer.com
 3. Include a description of the vulnerability and steps to reproduce
 4. Allow reasonable time for a fix before public disclosure
 
