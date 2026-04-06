@@ -39,6 +39,13 @@ const selectedDate = ref(props.selectedMonth ? (() => {
     return new Date(y, m - 1);
 })() : new Date());
 
+watch(() => props.selectedMonth, (newMonth) => {
+    if (newMonth) {
+        const [y, m] = newMonth.split('-');
+        selectedDate.value = new Date(y, m - 1);
+    }
+});
+
 function navigateMonth(month) {
     router.get('/', { month }, { preserveState: true });
 }
