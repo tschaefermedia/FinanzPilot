@@ -20,7 +20,7 @@ class RecurringTemplateController extends Controller
 
         return Inertia::render('Recurring/Index', [
             'templates' => $templates,
-            'categories' => $this->getCategoryTree(),
+            'categories' => Category::tree(),
             'accounts' => Account::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
@@ -111,33 +111,4 @@ class RecurringTemplateController extends Controller
         $template->update(['next_due_date' => $nextDate]);
     }
 
-    private function getCategoryTree(): array
-    {
-        $categories = Category::whereNull('parent_id')
-            ->with('children')
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
-
-        return $categories->map(fn ($category) => $this->mapCategoryNode($category))->toArray();
-    }
-
-    private function mapCategoryNode(Category $category): array
-    {
-        $node = [
-            'key' => $category->id,
-            'label' => $category->name,
-            'data' => $category->id,
-        ];
-
-        if ($category->children->isNotEmpty()) {
-            $node['children'] = $category->children
-                ->sortBy('sort_order')
-                ->map(fn ($child) => $this->mapCategoryNode($child))
-                ->values()
-                ->toArray();
-        }
-
-        return $node;
-    }
 }

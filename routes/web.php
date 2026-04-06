@@ -17,6 +17,7 @@ Route::get('/', DashboardController::class)->name('dashboard');
 // Accounts
 Route::resource('accounts', AccountController::class)->except(['show', 'create', 'edit']);
 
+Route::post('transactions/bulk-update-account', [TransactionController::class, 'bulkUpdateAccount'])->name('transactions.bulkUpdateAccount');
 Route::resource('transactions', TransactionController::class);
 Route::resource('categories', CategoryController::class)->except(['show']);
 

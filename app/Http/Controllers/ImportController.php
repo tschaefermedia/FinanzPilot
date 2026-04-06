@@ -171,13 +171,7 @@ class ImportController extends Controller
         }
 
         // Load categories for manual assignment
-        $categories = Category::whereNull('parent_id')
-            ->with('children')
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get()
-            ->map(fn ($c) => $this->mapCategoryNode($c))
-            ->toArray();
+        $categories = Category::tree();
 
         return Inertia::render('Import/Preview', [
             'transactions' => $previewData,
@@ -271,13 +265,7 @@ class ImportController extends Controller
             ->orderByDesc('date')
             ->paginate(50);
 
-        $categories = Category::whereNull('parent_id')
-            ->with('children')
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get()
-            ->map(fn ($c) => $this->mapCategoryNode($c))
-            ->toArray();
+        $categories = Category::tree();
 
         return Inertia::render('Import/Review', [
             'transactions' => $transactions,
@@ -333,22 +321,4 @@ class ImportController extends Controller
         return redirect()->back()->with('success', count($transactions).' Buchungen kategorisiert.');
     }
 
-    private function mapCategoryNode(Category $category): array
-    {
-        $node = [
-            'key' => $category->id,
-            'label' => $category->name,
-            'data' => $category->id,
-        ];
-
-        if ($category->children && $category->children->isNotEmpty()) {
-            $node['children'] = $category->children
-                ->sortBy('sort_order')
-                ->map(fn ($child) => $this->mapCategoryNode($child))
-                ->values()
-                ->toArray();
-        }
-
-        return $node;
-    }
 }

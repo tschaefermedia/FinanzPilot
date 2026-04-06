@@ -74,6 +74,8 @@ class LoanController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        $validated['interest_rate'] ??= 0;
+
         Loan::create($validated);
 
         return redirect()->back()->with('success', 'Darlehen erstellt.');
@@ -96,6 +98,8 @@ class LoanController extends Controller
             'direction' => 'required|in:owed_by_me,owed_to_me',
             'notes' => 'nullable|string',
         ]);
+
+        $validated['interest_rate'] ??= 0;
 
         $loan->update($validated);
 
@@ -180,19 +184,32 @@ class LoanController extends Controller
     public function unmatchedTransactions(Loan $loan)
     {
         $query = Transaction::where('amount', '<', 0)
-            ->whereDoesntHave('loanPayment')
-            ->where('date', '>=', $loan->start_date)
-            ->orderByDesc('date');
+            ->whereDoesntHave('loanPayment');
 
-        if ($loan->account_id) {
-            $query->where('account_id', $loan->account_id);
-        }
-
+        // Sort matches to the top, then by date descending
         if ($loan->match_description) {
-            $query->where('description', 'like', '%'.$loan->match_description.'%');
+            $pattern = '%'.$loan->match_description.'%';
+            $query->orderByRaw(
+                'CASE WHEN description LIKE ? OR counterparty LIKE ? OR reference LIKE ? THEN 0 ELSE 1 END',
+                [$pattern, $pattern, $pattern]
+            );
         }
 
-        return $query->limit(50)->get(['id', 'date', 'description', 'amount', 'account_id']);
+        $query->orderByDesc('date');
+
+        $transactions = $query->limit(50)->get(['id', 'date', 'description', 'counterparty', 'amount', 'account_id']);
+
+        // Mark which ones match the text
+        if ($loan->match_description) {
+            $needle = mb_strtolower($loan->match_description);
+            $transactions->each(function ($t) use ($needle) {
+                $t->is_match = str_contains(mb_strtolower($t->description ?? ''), $needle)
+                    || str_contains(mb_strtolower($t->counterparty ?? ''), $needle)
+                    || str_contains(mb_strtolower($t->reference ?? ''), $needle);
+            });
+        }
+
+        return $transactions;
     }
 
     /**

@@ -72,14 +72,16 @@ class AmortizationService
         if (empty($schedule)) {
             // Informal loan — simple summary
             $totalPaid = $loan->payments->sum('amount');
-            $base = (float) ($loan->initial_balance ?? $loan->principal);
+            $principal = (float) $loan->principal;
+            $initialBalance = (float) ($loan->initial_balance ?? $principal);
+            $prePaid = $principal - $initialBalance;
 
             return [
                 'totalPayments' => round($totalPaid, 2),
-                'remainingBalance' => round($base - $totalPaid, 2),
+                'remainingBalance' => round($initialBalance - $totalPaid, 2),
                 'totalInterest' => 0,
                 'monthlyPayment' => (float) ($loan->monthly_rate ?? 0),
-                'progressPercent' => $base > 0 ? round(($totalPaid / $base) * 100, 1) : 0,
+                'progressPercent' => $principal > 0 ? round((($prePaid + $totalPaid) / $principal) * 100, 1) : 0,
             ];
         }
 
@@ -89,8 +91,10 @@ class AmortizationService
 
         // Calculate actual remaining balance based on payments made
         $totalPaid = $loan->payments->sum('amount');
+        $principal = (float) $loan->principal;
+        $initialBalance = (float) ($loan->initial_balance ?? $principal);
+        $prePaid = $principal - $initialBalance;
         $paidPrincipal = 0;
-        $base = (float) ($loan->initial_balance ?? $loan->principal);
 
         foreach ($schedule as $entry) {
             if ($totalPaid >= $entry['payment']) {
@@ -101,14 +105,14 @@ class AmortizationService
             }
         }
 
-        $remaining = $base - $paidPrincipal;
+        $remaining = $initialBalance - $paidPrincipal;
 
         return [
             'totalPayments' => round($totalPayments, 2),
             'remainingBalance' => round(max(0, $remaining), 2),
             'totalInterest' => round($totalInterest, 2),
             'monthlyPayment' => round($monthlyPayment, 2),
-            'progressPercent' => $base > 0 ? round(($paidPrincipal / $base) * 100, 1) : 0,
+            'progressPercent' => $principal > 0 ? round((($prePaid + $paidPrincipal) / $principal) * 100, 1) : 0,
             'schedule' => $schedule,
         ];
     }
@@ -142,7 +146,11 @@ class AmortizationService
         }
 
         if ($loan->match_description) {
-            $query->where('description', 'like', '%'.$loan->match_description.'%');
+            $query->where(function ($q) use ($loan) {
+                $q->where('description', 'like', '%'.$loan->match_description.'%')
+                    ->orWhere('counterparty', 'like', '%'.$loan->match_description.'%')
+                    ->orWhere('reference', 'like', '%'.$loan->match_description.'%');
+            });
         }
 
         $transactions = $query->get();

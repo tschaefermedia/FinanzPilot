@@ -12,6 +12,7 @@ import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import Select from 'primevue/select';
+import Checkbox from 'primevue/checkbox';
 
 const { formatCurrency, formatDate } = useFormatters();
 const confirm = useConfirm();
@@ -25,6 +26,9 @@ const props = defineProps({
 
 const search = ref(props.filters.search || '');
 const accountFilter = ref(props.filters.account_id || null);
+
+const selectedIds = ref([]);
+const bulkAccountId = ref(null);
 
 const sortFieldMap = { date: 'date', amount: 'amount', description: 'description' };
 const sortField = ref(props.filters.sort_field || 'date');
@@ -60,6 +64,39 @@ function sourceLabel(source) {
     return labels[source] || source;
 }
 
+const accountFilterOptions = [
+    { name: 'Ohne Konto', id: 'none' },
+    ...props.accounts,
+];
+
+function toggleSelection(id) {
+    const idx = selectedIds.value.indexOf(id);
+    if (idx >= 0) {
+        selectedIds.value.splice(idx, 1);
+    } else {
+        selectedIds.value.push(id);
+    }
+}
+
+function isSelected(id) {
+    return selectedIds.value.includes(id);
+}
+
+function bulkUpdateAccount() {
+    if (selectedIds.value.length === 0) return;
+
+    router.post('/transactions/bulk-update-account', {
+        transaction_ids: selectedIds.value,
+        account_id: bulkAccountId.value,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            selectedIds.value = [];
+            bulkAccountId.value = null;
+        },
+    });
+}
+
 function deleteTransaction(id) {
     confirm.require({
         message: 'Buchung wirklich löschen?',
@@ -81,13 +118,28 @@ function deleteTransaction(id) {
             </Link>
         </PageHeader>
 
+        <!-- Bulk actions -->
+        <div v-if="selectedIds.length > 0" class="bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700 p-4 mb-4 flex items-center gap-4">
+            <span class="text-sm font-medium text-blue-700 dark:text-blue-400">{{ selectedIds.length }} ausgewählt</span>
+            <Select
+                v-model="bulkAccountId"
+                :options="accounts"
+                optionLabel="name"
+                optionValue="id"
+                placeholder="Konto wählen"
+                class="w-64"
+                showClear
+            />
+            <Button label="Zuweisen" size="small" @click="bulkUpdateAccount" :disabled="bulkAccountId === null" />
+        </div>
+
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
             <div class="p-4 border-b border-gray-100 dark:border-gray-700">
                 <div class="flex gap-3">
                     <InputText v-model="search" placeholder="Suchen..." class="w-full max-w-sm" @keyup.enter="applySearch" />
                     <Select
                         v-model="accountFilter"
-                        :options="accounts"
+                        :options="accountFilterOptions"
                         optionLabel="name"
                         optionValue="id"
                         placeholder="Alle Konten"
@@ -115,6 +167,13 @@ function deleteTransaction(id) {
                 @row-click="(e) => router.visit(`/transactions/${e.data.id}/edit`)"
                 class="text-sm cursor-pointer"
             >
+                <Column style="width: 50px">
+                    <template #body="{ data }">
+                        <div @click.stop>
+                            <Checkbox :binary="true" :modelValue="isSelected(data.id)" @update:modelValue="toggleSelection(data.id)" />
+                        </div>
+                    </template>
+                </Column>
                 <Column field="date" header="Datum" sortable style="width: 120px">
                     <template #body="{ data }">{{ formatDate(data.date) }}</template>
                 </Column>

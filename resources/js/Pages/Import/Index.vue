@@ -4,9 +4,7 @@ import PageHeader from '@/Components/PageHeader.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import { useFormatters } from '@/Composables/useFormatters.js';
 import { useForm, Link } from '@inertiajs/vue3';
-import { ref } from 'vue';
 import Button from 'primevue/button';
-import FileUpload from 'primevue/fileupload';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Tag from 'primevue/tag';
@@ -22,10 +20,8 @@ const form = useForm({
     file: null,
 });
 
-const fileInput = ref(null);
-
 function onFileSelect(event) {
-    const file = event.target?.files?.[0] || event.files?.[0];
+    const file = event.target?.files?.[0];
     if (file) {
         form.file = file;
         form.post('/imports/upload', {
@@ -65,7 +61,7 @@ function sourceLabel(type) {
                 <label class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors">
                     <i class="pi pi-upload"></i>
                     <span>Datei auswählen</span>
-                    <input type="file" accept=".csv,.txt" class="hidden" @change="onFileSelect" ref="fileInput" />
+                    <input type="file" accept=".csv,.txt" class="hidden" @change="onFileSelect" />
                 </label>
 
                 <div v-if="form.processing" class="mt-4">

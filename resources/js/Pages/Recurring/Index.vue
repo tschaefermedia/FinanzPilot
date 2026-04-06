@@ -198,7 +198,7 @@ function generateNow(id) {
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Kategorie</label>
-                    <TreeSelect v-model="selectedCategory" :options="categories" placeholder="Kategorie wählen" class="w-full" selectionMode="single" />
+                    <TreeSelect v-model="selectedCategory" :options="categories" placeholder="Kategorie wählen" class="w-full" selectionMode="single" filter filterPlaceholder="Suchen..." />
                 </div>
 
                 <div>

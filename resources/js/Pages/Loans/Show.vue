@@ -218,11 +218,12 @@ const chartSeries = computed(() => [
         <Dialog v-model:visible="showMatchDialog" header="Buchung zuordnen" modal class="w-full max-w-2xl">
             <div v-if="loadingTransactions" class="py-8 text-center text-gray-500 text-sm">Buchungen werden geladen...</div>
             <div v-else-if="unmatchedTransactions.length === 0" class="py-8 text-center text-gray-400 dark:text-gray-400 text-sm">Keine passenden Buchungen gefunden.</div>
-            <DataTable v-else :value="unmatchedTransactions" class="text-sm" :rows="10" paginator>
+            <DataTable v-else :value="unmatchedTransactions" class="text-sm" :rows="10" paginator :rowClass="(data) => data.is_match ? 'bg-green-50 dark:bg-green-900/20' : ''">
                 <Column field="date" header="Datum" style="width: 110px">
                     <template #body="{ data }">{{ formatDate(data.date) }}</template>
                 </Column>
                 <Column field="description" header="Beschreibung" />
+                <Column field="counterparty" header="Empfänger" style="width: 150px" />
                 <Column field="amount" header="Betrag" style="width: 120px">
                     <template #body="{ data }">{{ formatCurrency(Math.abs(data.amount)) }}</template>
                 </Column>

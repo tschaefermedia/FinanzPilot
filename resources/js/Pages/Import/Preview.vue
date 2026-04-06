@@ -86,6 +86,7 @@ function commitImport() {
         transactions: selected,
         account_id: selectedAccountId.value,
     }, {
+        preserveState: false,
         onFinish: () => { submitting.value = false; },
     });
 }
@@ -164,6 +165,8 @@ function commitImport() {
                             placeholder="—"
                             class="w-full text-xs"
                             selectionMode="single"
+                            filter
+                            filterPlaceholder="Suchen..."
                         />
                     </template>
                 </Column>

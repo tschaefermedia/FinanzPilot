@@ -78,6 +78,8 @@ function isSelected(id) {
                 placeholder="Kategorie wählen"
                 class="w-64"
                 selectionMode="single"
+                filter
+                filterPlaceholder="Suchen..."
             />
             <Button label="Zuweisen" size="small" @click="bulkCategorize" :disabled="!bulkCategorySelection" />
         </div>
@@ -115,6 +117,8 @@ function isSelected(id) {
                             placeholder="Kategorie wählen"
                             class="w-full"
                             selectionMode="single"
+                            filter
+                            filterPlaceholder="Suchen..."
                         />
                     </template>
                 </Column>

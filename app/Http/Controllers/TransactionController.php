@@ -38,7 +38,9 @@ class TransactionController extends Controller
             $query->where('amount', $request->type === 'income' ? '>' : '<', 0);
         }
 
-        if ($request->filled('account_id')) {
+        if ($request->input('account_id') === 'none') {
+            $query->whereNull('account_id');
+        } elseif ($request->filled('account_id')) {
             $query->where('account_id', $request->account_id);
         }
 
@@ -71,7 +73,7 @@ class TransactionController extends Controller
     public function create()
     {
         return Inertia::render('Transactions/Form', [
-            'categories' => $this->getCategoryTree(),
+            'categories' => Category::tree(),
             'accounts' => Account::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
@@ -99,7 +101,7 @@ class TransactionController extends Controller
     {
         return Inertia::render('Transactions/Form', [
             'transaction' => $transaction->load('category'),
-            'categories' => $this->getCategoryTree(),
+            'categories' => Category::tree(),
             'accounts' => Account::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
@@ -128,33 +130,20 @@ class TransactionController extends Controller
         return redirect()->back()->with('success', 'Buchung gelöscht.');
     }
 
-    private function getCategoryTree(): array
+    public function bulkUpdateAccount(Request $request)
     {
-        $categories = Category::whereNull('parent_id')
-            ->with('children')
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
+        $request->validate([
+            'transaction_ids' => 'required|array|min:1',
+            'transaction_ids.*' => 'exists:transactions,id',
+            'account_id' => 'nullable|exists:accounts,id',
+        ]);
 
-        return $categories->map(fn ($category) => $this->mapCategoryNode($category))->toArray();
-    }
+        Transaction::whereIn('id', $request->transaction_ids)
+            ->update(['account_id' => $request->account_id]);
 
-    private function mapCategoryNode(Category $category): array
-    {
-        $node = [
-            'key' => $category->id,
-            'label' => $category->name,
-            'data' => $category->id,
-        ];
-
-        if ($category->children->isNotEmpty()) {
-            $node['children'] = $category->children
-                ->sortBy('sort_order')
-                ->map(fn ($child) => $this->mapCategoryNode($child))
-                ->values()
-                ->toArray();
-        }
-
-        return $node;
+        return redirect()->back()->with(
+            'success',
+            count($request->transaction_ids).' Buchungen aktualisiert.'
+        );
     }
 }
