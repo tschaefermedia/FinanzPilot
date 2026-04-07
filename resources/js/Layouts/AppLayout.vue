@@ -44,6 +44,7 @@ const navItems = [
     { label: 'Daueraufträge', icon: 'pi pi-replay', href: '/recurring', active: true },
     { label: 'Kalender', icon: 'pi pi-calendar', href: '/calendar', active: true },
     { label: 'Trends', icon: 'pi pi-chart-line', href: '/trends', active: true },
+    { label: 'KI-Analyse', icon: 'pi pi-sparkles', href: '/ai', active: true },
     { label: 'Export', icon: 'pi pi-download', href: '/export', active: true },
     { label: 'Einstellungen', icon: 'pi pi-cog', href: '/settings', active: true },
 ];

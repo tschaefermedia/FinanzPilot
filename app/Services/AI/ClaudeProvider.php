@@ -11,15 +11,15 @@ class ClaudeProvider implements AiProviderInterface
         private string $model = 'claude-sonnet-4-5-20250514',
     ) {}
 
-    public function chat(string $systemPrompt, string $userMessage): string
+    public function chat(string $systemPrompt, string $userMessage, int $maxTokens = 1024): string
     {
         $response = Http::withHeaders([
             'x-api-key' => $this->apiKey,
             'anthropic-version' => '2023-06-01',
             'content-type' => 'application/json',
-        ])->timeout(30)->post('https://api.anthropic.com/v1/messages', [
+        ])->timeout(45)->post('https://api.anthropic.com/v1/messages', [
             'model' => $this->model,
-            'max_tokens' => 1024,
+            'max_tokens' => $maxTokens,
             'system' => $systemPrompt,
             'messages' => [
                 ['role' => 'user', 'content' => $userMessage],

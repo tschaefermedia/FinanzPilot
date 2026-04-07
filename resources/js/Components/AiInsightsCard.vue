@@ -1,30 +1,32 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import { Link } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import { useCsrfFetch } from '@/Composables/useCsrfFetch.js';
 
 const { csrfFetch } = useCsrfFetch();
 
-const insights = ref(null);
 const loading = ref(true);
 const error = ref(null);
 const enabled = ref(false);
+const structured = ref(null);
+const legacyInsights = ref(null);
 
-async function fetchInsights(refresh = false) {
+async function fetchInsights() {
     loading.value = true;
     error.value = null;
 
     try {
-        const url = refresh ? '/api/insights/refresh' : '/api/insights';
-        const method = refresh ? 'POST' : 'GET';
-
-        const response = await csrfFetch(url, { method });
+        // Try structured endpoint first
+        const response = await csrfFetch('/api/ai/insights', { method: 'GET' });
         const data = await response.json();
 
         enabled.value = data.enabled;
 
-        if (data.enabled && data.insights) {
-            insights.value = data.insights;
+        if (data.enabled && data.structured) {
+            structured.value = data.structured;
+        } else if (data.enabled && data.raw) {
+            legacyInsights.value = data.raw;
         } else if (data.error) {
             error.value = data.error;
         } else if (!data.enabled) {
@@ -39,11 +41,19 @@ async function fetchInsights(refresh = false) {
 
 onMounted(() => fetchInsights());
 
-function formatInsights(text) {
-    return text
-        .replace(/\*\*(.*?)\*\*/g, '$1')
-        .replace(/^- /gm, '• ');
-}
+const healthColor = computed(() => {
+    if (!structured.value) return '#9ca3af';
+    const score = structured.value.healthScore;
+    if (score >= 80) return '#22c55e';
+    if (score >= 60) return '#3b82f6';
+    if (score >= 40) return '#f59e0b';
+    return '#ef4444';
+});
+
+const topRecommendation = computed(() => {
+    if (!structured.value?.recommendations?.length) return null;
+    return structured.value.recommendations[0];
+});
 </script>
 
 <template>
@@ -53,15 +63,9 @@ function formatInsights(text) {
                 <i class="pi pi-sparkles text-purple-500 mr-1"></i>
                 KI-Analyse
             </h3>
-            <Button
-                v-if="enabled && !loading"
-                icon="pi pi-refresh"
-                text
-                rounded
-                size="small"
-                @click="fetchInsights(true)"
-                title="Aktualisieren"
-            />
+            <Link href="/ai" class="text-xs text-blue-500 hover:underline">
+                Vollständige Analyse →
+            </Link>
         </div>
 
         <div v-if="loading" class="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 py-4">
@@ -76,8 +80,26 @@ function formatInsights(text) {
             </a>
         </div>
 
-        <div v-else-if="insights" class="prose prose-sm max-w-none text-gray-700 dark:text-gray-200">
-            <pre class="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200 font-sans leading-relaxed">{{ formatInsights(insights) }}</pre>
-        </div>
+        <template v-else-if="structured">
+            <!-- Compact: Health score + top recommendation -->
+            <div class="flex items-center gap-4 mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl font-bold" :style="{ color: healthColor }">{{ structured.healthScore }}</span>
+                    <span class="text-xs text-gray-400">/100</span>
+                </div>
+                <p class="text-sm text-gray-600 dark:text-gray-300 flex-1">{{ structured.summary }}</p>
+            </div>
+
+            <div v-if="topRecommendation" class="bg-purple-50 dark:bg-purple-900/20 rounded-lg px-3 py-2">
+                <p class="text-xs font-medium text-purple-700 dark:text-purple-400">
+                    <i class="pi pi-lightbulb mr-1"></i>{{ topRecommendation.title }}
+                </p>
+                <p class="text-xs text-purple-600 dark:text-purple-300 mt-0.5">{{ topRecommendation.detail }}</p>
+            </div>
+        </template>
+
+        <template v-else-if="legacyInsights">
+            <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-3">{{ legacyInsights }}</p>
+        </template>
     </div>
 </template>
