@@ -12,7 +12,7 @@ class OpenAiCompatibleProvider implements AiProviderInterface
         private ?string $apiKey = null,
     ) {}
 
-    public function chat(string $systemPrompt, string $userMessage): string
+    public function chat(string $systemPrompt, string $userMessage, int $maxTokens = 1024): string
     {
         $headers = ['content-type' => 'application/json'];
         if ($this->apiKey) {
@@ -27,7 +27,7 @@ class OpenAiCompatibleProvider implements AiProviderInterface
                 ['role' => 'system', 'content' => $systemPrompt],
                 ['role' => 'user', 'content' => $userMessage],
             ],
-            'max_tokens' => 1024,
+            'max_tokens' => $maxTokens,
         ]);
 
         if ($response->failed()) {
