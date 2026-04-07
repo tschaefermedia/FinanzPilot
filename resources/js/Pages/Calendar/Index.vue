@@ -158,9 +158,7 @@ const currentSummary = computed(() => props.summary[props.selectedMonth] || { in
 <template>
     <AppLayout>
         <PageHeader title="Kalender">
-            <template #actions>
-                <Button label="Neue Zahlung" icon="pi pi-plus" size="small" @click="openCreate()" />
-            </template>
+            <Button label="Neue Zahlung" icon="pi pi-plus" size="small" @click="openCreate()" />
         </PageHeader>
 
         <div class="flex items-center justify-center gap-3 mb-6">
