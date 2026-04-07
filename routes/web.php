@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AiAnalysisController;
 use App\Http\Controllers\AiInsightsController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CategoryAnalysisController;
@@ -67,6 +68,11 @@ Route::post('export/batch', [ExportController::class, 'exportBatch'])->name('exp
 Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
 Route::put('settings/ai', [SettingsController::class, 'updateAi'])->name('settings.updateAi');
 Route::delete('settings/clear-all', [SettingsController::class, 'clearAll'])->name('settings.clearAll');
+
+// AI Analysis page
+Route::get('ai', [AiAnalysisController::class, 'index'])->name('ai.index');
+Route::get('api/ai/insights', [AiAnalysisController::class, 'insights'])->name('api.ai.insights');
+Route::post('api/ai/refresh', [AiAnalysisController::class, 'refresh'])->middleware('throttle:5,1')->name('api.ai.refresh');
 
 // AI Insights (JSON API for dashboard widget)
 Route::get('api/insights', [AiInsightsController::class, 'index'])->name('api.insights');

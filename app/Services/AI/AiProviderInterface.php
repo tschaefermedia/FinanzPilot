@@ -9,7 +9,7 @@ interface AiProviderInterface
      *
      * @return string The AI response text
      */
-    public function chat(string $systemPrompt, string $userMessage): string;
+    public function chat(string $systemPrompt, string $userMessage, int $maxTokens = 1024): string;
 
     /**
      * Get the provider name for display.
