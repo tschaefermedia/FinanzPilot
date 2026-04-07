@@ -46,6 +46,7 @@ class DashboardController extends Controller
                 SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as expenses
             ")
             ->where('date', '>=', now()->subMonths(12)->startOfMonth()->toDateString())
+            ->whereDoesntHave('category', fn ($q) => $q->where('type', 'transfer'))
             ->groupByRaw("strftime('%Y-%m', date)")
             ->orderBy('month')
             ->get();
@@ -56,6 +57,7 @@ class DashboardController extends Controller
         $categoryData = Transaction::select('categories.name', DB::raw('SUM(ABS(transactions.amount)) as total'))
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
             ->where('transactions.amount', '<', 0)
+            ->where('categories.type', '!=', 'transfer')
             ->whereBetween('transactions.date', [$monthStart, $monthEnd])
             ->groupBy('categories.name')
             ->orderByDesc('total')
