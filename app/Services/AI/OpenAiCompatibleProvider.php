@@ -14,6 +14,13 @@ class OpenAiCompatibleProvider implements AiProviderInterface
 
     public function chat(string $systemPrompt, string $userMessage, int $maxTokens = 1024): string
     {
+        return $this->chatWithHistory($systemPrompt, [
+            ['role' => 'user', 'content' => $userMessage],
+        ], $maxTokens);
+    }
+
+    public function chatWithHistory(string $systemPrompt, array $messages, int $maxTokens = 1024): string
+    {
         $headers = ['content-type' => 'application/json'];
         if ($this->apiKey) {
             $headers['Authorization'] = 'Bearer '.$this->apiKey;
@@ -21,12 +28,15 @@ class OpenAiCompatibleProvider implements AiProviderInterface
 
         $url = rtrim($this->baseUrl, '/').'/v1/chat/completions';
 
+        // Prepend system message to conversation
+        $allMessages = [
+            ['role' => 'system', 'content' => $systemPrompt],
+            ...$messages,
+        ];
+
         $response = Http::withHeaders($headers)->timeout(60)->post($url, [
             'model' => $this->model,
-            'messages' => [
-                ['role' => 'system', 'content' => $systemPrompt],
-                ['role' => 'user', 'content' => $userMessage],
-            ],
+            'messages' => $allMessages,
             'max_tokens' => $maxTokens,
         ]);
 
