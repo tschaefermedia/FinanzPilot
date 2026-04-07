@@ -37,6 +37,7 @@ class FinancialSnapshot
                 SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as expenses
             ")
             ->where('date', '>=', $sixMonthsAgo)
+            ->whereDoesntHave('category', fn ($q) => $q->where('type', 'transfer'))
             ->groupByRaw("strftime('%Y-%m', date)")
             ->orderBy('month')
             ->get();
@@ -58,6 +59,7 @@ class FinancialSnapshot
         $categoryExpenses = Transaction::select('categories.name', DB::raw('SUM(ABS(transactions.amount)) as total'))
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
             ->where('transactions.amount', '<', 0)
+            ->where('categories.type', '!=', 'transfer')
             ->whereRaw("strftime('%Y-%m', transactions.date) = ?", [$currentMonth])
             ->groupBy('categories.name')
             ->orderByDesc('total')
@@ -87,6 +89,7 @@ class FinancialSnapshot
         $prevCategoryExpenses = Transaction::select('categories.name', DB::raw('SUM(ABS(transactions.amount)) as total'))
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
             ->where('transactions.amount', '<', 0)
+            ->where('categories.type', '!=', 'transfer')
             ->whereRaw("strftime('%Y-%m', transactions.date) = ?", [$prevMonth])
             ->groupBy('categories.name')
             ->get()

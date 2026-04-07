@@ -22,6 +22,7 @@ class TrendController extends Controller
                 SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as expenses
             ")
             ->where('date', '>=', $twelveMonthsAgo)
+            ->whereDoesntHave('category', fn ($q) => $q->where('type', 'transfer'))
             ->groupByRaw("strftime('%Y-%m', date)")
             ->orderBy('month')
             ->get()
@@ -39,6 +40,7 @@ class TrendController extends Controller
         )
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
             ->where('transactions.amount', '<', 0)
+            ->where('categories.type', '!=', 'transfer')
             ->where('transactions.date', '>=', $sixMonthsAgo)
             ->groupBy('categories.name', DB::raw("strftime('%Y-%m', transactions.date)"))
             ->get();

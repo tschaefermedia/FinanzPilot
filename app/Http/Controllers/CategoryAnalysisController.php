@@ -41,6 +41,7 @@ class CategoryAnalysisController extends Controller
             DB::raw('COUNT(*) as transaction_count')
         )
             ->whereNotNull('category_id')
+            ->whereDoesntHave('category', fn ($q) => $q->where('type', 'transfer'))
             ->whereBetween('date', [$monthStart, $monthEnd])
             ->groupBy('category_id')
             ->get()
