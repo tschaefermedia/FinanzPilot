@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Ai\Agents\FinancialAnalyst;
 use App\Services\AI\AiConfigService;
+use App\Services\AI\FinancialSnapshot;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
@@ -11,11 +12,17 @@ class AiAnalysisController extends Controller
 {
     /**
      * Show the dedicated AI analysis page.
+     * Anomalies and history are passed as Inertia props (instant, no AI call).
      */
     public function index()
     {
+        $snapshot = FinancialSnapshot::capture();
+
         return Inertia::render('AI/Index', [
             'aiEnabled' => AiConfigService::isEnabled(),
+            'anomalies' => $snapshot->anomalies,
+            'budgetUtilization' => $snapshot->budgetUtilization,
+            'history' => FinancialAnalyst::history(),
         ]);
     }
 

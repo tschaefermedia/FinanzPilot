@@ -16,6 +16,9 @@ const { isDark } = useTheme();
 
 const props = defineProps({
     aiEnabled: { type: Boolean, default: false },
+    anomalies: { type: Array, default: () => [] },
+    budgetUtilization: { type: Array, default: () => [] },
+    history: { type: Array, default: () => [] },
 });
 
 const loading = ref(true);
@@ -23,9 +26,8 @@ const error = ref(null);
 const data = ref(null);
 const structured = ref(null);
 const snapshot = ref(null);
-
-const chartTextColor = computed(() => isDark.value ? '#9ca3af' : '#6b7280');
-const chartGridColor = computed(() => isDark.value ? '#374151' : '#e5e7eb');
+const historyExpanded = ref(false);
+const expandedHistoryId = ref(null);
 
 async function fetchInsights(refresh = false) {
     loading.value = true;
@@ -175,14 +177,6 @@ const expensesSparkSeries = computed(() => [{
 }]);
 
 // Highlight styling
-function highlightSeverity(type) {
-    return {
-        positive: 'success',
-        warning: 'warn',
-        critical: 'danger',
-    }[type] || 'info';
-}
-
 function highlightIcon(type) {
     return {
         positive: 'pi pi-check-circle',
@@ -242,7 +236,7 @@ function budgetProgressColor(status) {
     }[status] || '#9ca3af';
 }
 
-// Anomaly icon
+// Anomaly helpers
 function anomalyIcon(type) {
     return {
         large_transaction: 'pi pi-exclamation-circle',
@@ -256,6 +250,22 @@ function anomalyLabel(a) {
     if (a.type === 'category_spike') return `"${a.category}" — ${a.aboveAverage}% über 3-Monats-Durchschnitt`;
     if (a.type === 'new_category') return `Neue Kategorie: "${a.category}"`;
     return '';
+}
+
+// History helpers
+function healthScoreColor(score) {
+    if (score >= 80) return '#22c55e';
+    if (score >= 60) return '#3b82f6';
+    if (score >= 40) return '#f59e0b';
+    return '#ef4444';
+}
+
+function formatHistoryDate(iso) {
+    return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function toggleHistoryItem(id) {
+    expandedHistoryId.value = expandedHistoryId.value === id ? null : id;
 }
 
 // Raw text fallback formatting
@@ -280,6 +290,70 @@ function formatRawInsights(text) {
             />
         </div>
 
+        <!-- Standalone Anomalies (instant, no AI needed) -->
+        <div v-if="props.anomalies.length" class="mb-6">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
+                <i class="pi pi-exclamation-triangle text-amber-500 mr-1"></i>
+                Auffälligkeiten
+            </h3>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+                <div
+                    v-for="(a, i) in props.anomalies"
+                    :key="i"
+                    class="flex items-center gap-3 px-4 py-3"
+                >
+                    <i :class="[anomalyIcon(a.type), 'text-amber-500']"></i>
+                    <span class="text-sm text-gray-700 dark:text-gray-200">{{ anomalyLabel(a) }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Standalone Budget Utilization (instant, no AI needed) -->
+        <div v-if="props.budgetUtilization.length && !structured" class="mb-6">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
+                <i class="pi pi-gauge text-purple-500 mr-1"></i>
+                Budget-Auslastung
+            </h3>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                <div class="space-y-4">
+                    <div v-for="(b, i) in props.budgetUtilization" :key="i">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm text-gray-700 dark:text-gray-200">{{ b.category }}</span>
+                            <span :class="['text-xs font-medium', budgetStatusColor(b.status)]">
+                                {{ b.spentPercent }}% verbraucht
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                                class="h-2 rounded-full transition-all"
+                                :style="{
+                                    width: Math.min(b.spentPercent, 100) + '%',
+                                    backgroundColor: budgetProgressColor(b.status),
+                                }"
+                            ></div>
+                        </div>
+                        <div class="flex items-center justify-between mt-1">
+                            <p class="text-xs text-gray-400">
+                                Prognose: {{ b.projectedPercent }}% bei {{ b.monthProgress }}% des Monats
+                            </p>
+                            <div v-if="b.history?.length" class="flex gap-1">
+                                <span
+                                    v-for="(h, j) in b.history"
+                                    :key="j"
+                                    :class="['inline-block w-2 h-2 rounded-full', {
+                                        'bg-green-500': h.status === 'on_track',
+                                        'bg-amber-500': h.status === 'warning',
+                                        'bg-red-500': h.status === 'over',
+                                    }]"
+                                    :title="`${h.month}: ${h.percent}%`"
+                                ></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Loading -->
         <div v-if="loading" class="flex flex-col items-center justify-center py-24 gap-4">
             <i class="pi pi-spin pi-spinner text-3xl text-purple-500"></i>
@@ -300,7 +374,6 @@ function formatRawInsights(text) {
         <template v-else-if="structured">
             <!-- Health Score + Summary -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                <!-- Health Score -->
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col items-center">
                     <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Finanzgesundheit</h3>
                     <VueApexCharts type="radialBar" :options="healthChartOptions" :series="healthChartSeries" height="200" width="200" />
@@ -311,7 +384,6 @@ function formatRawInsights(text) {
                     </div>
                 </div>
 
-                <!-- Summary + Key Metrics -->
                 <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
                     <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">Zusammenfassung</h3>
                     <p class="text-gray-700 dark:text-gray-200 leading-relaxed mb-4">{{ structured.summary }}</p>
@@ -380,38 +452,15 @@ function formatRawInsights(text) {
                 </div>
             </div>
 
-            <!-- Anomalies -->
-            <div v-if="snapshot?.anomalies?.length" class="mb-6">
-                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
-                    <i class="pi pi-exclamation-triangle text-amber-500 mr-1"></i>
-                    Auffälligkeiten
-                </h3>
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
-                    <div
-                        v-for="(a, i) in snapshot.anomalies"
-                        :key="i"
-                        class="flex items-center gap-3 px-4 py-3"
-                    >
-                        <i :class="[anomalyIcon(a.type), 'text-amber-500']"></i>
-                        <span class="text-sm text-gray-700 dark:text-gray-200">{{ anomalyLabel(a) }}</span>
-                    </div>
-                </div>
-            </div>
-
             <!-- Category Insights + Budget Utilization -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <!-- Category Insights -->
                 <div v-if="structured.categoryInsights?.length" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
                         <i class="pi pi-tags text-blue-500 mr-1"></i>
                         Kategorien
                     </h3>
                     <div class="space-y-3">
-                        <div
-                            v-for="(c, i) in structured.categoryInsights"
-                            :key="i"
-                            class="flex items-start gap-3"
-                        >
+                        <div v-for="(c, i) in structured.categoryInsights" :key="i" class="flex items-start gap-3">
                             <i :class="[categoryTrendIcon(c.trend), 'mt-0.5']"></i>
                             <div>
                                 <p class="text-sm font-medium text-gray-900 dark:text-white">{{ c.category }}</p>
@@ -421,7 +470,6 @@ function formatRawInsights(text) {
                     </div>
                 </div>
 
-                <!-- Budget Utilization -->
                 <div v-if="snapshot?.budgetUtilization?.length" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
                         <i class="pi pi-gauge text-purple-500 mr-1"></i>
@@ -444,9 +492,23 @@ function formatRawInsights(text) {
                                     }"
                                 ></div>
                             </div>
-                            <p class="text-xs text-gray-400 mt-1">
-                                Prognose: {{ b.projectedPercent }}% bei {{ b.monthProgress }}% des Monats
-                            </p>
+                            <div class="flex items-center justify-between mt-1">
+                                <p class="text-xs text-gray-400">
+                                    Prognose: {{ b.projectedPercent }}% bei {{ b.monthProgress }}% des Monats
+                                </p>
+                                <div v-if="b.history?.length" class="flex gap-1">
+                                    <span
+                                        v-for="(h, j) in b.history"
+                                        :key="j"
+                                        :class="['inline-block w-2 h-2 rounded-full', {
+                                            'bg-green-500': h.status === 'on_track',
+                                            'bg-amber-500': h.status === 'warning',
+                                            'bg-red-500': h.status === 'over',
+                                        }]"
+                                        :title="`${h.month}: ${h.percent}%`"
+                                    ></span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -459,11 +521,7 @@ function formatRawInsights(text) {
                     Darlehen
                 </h3>
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
-                    <div
-                        v-for="(l, i) in structured.loanInsights"
-                        :key="i"
-                        class="px-4 py-3"
-                    >
+                    <div v-for="(l, i) in structured.loanInsights" :key="i" class="px-4 py-3">
                         <p class="text-sm font-medium text-gray-900 dark:text-white">{{ l.loan }}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ l.comment }}</p>
                     </div>
@@ -508,14 +566,64 @@ function formatRawInsights(text) {
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
                 <pre class="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200 font-sans leading-relaxed">{{ formatRawInsights(data.raw) }}</pre>
             </div>
-
-            <!-- Chat also available in raw fallback mode -->
             <ChatInterface />
         </template>
 
-        <!-- Chat when AI is enabled but no analysis yet (e.g. loading error then retry) -->
         <template v-else-if="!loading && props.aiEnabled && !error">
             <ChatInterface />
         </template>
+
+        <!-- Analysis History Timeline -->
+        <div v-if="props.history.length > 0" class="mt-8">
+            <button
+                class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3 hover:text-gray-900 dark:hover:text-white transition-colors"
+                @click="historyExpanded = !historyExpanded"
+            >
+                <i :class="['pi text-xs', historyExpanded ? 'pi-chevron-down' : 'pi pi-chevron-right']"></i>
+                <i class="pi pi-history text-gray-400 mr-1"></i>
+                Frühere Analysen ({{ props.history.length }})
+            </button>
+
+            <div v-if="historyExpanded" class="space-y-2">
+                <div
+                    v-for="entry in props.history"
+                    :key="entry.id"
+                    class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700"
+                >
+                    <button
+                        class="w-full flex items-center gap-4 px-4 py-3 text-left"
+                        @click="toggleHistoryItem(entry.id)"
+                    >
+                        <span
+                            class="text-lg font-bold w-10 text-center"
+                            :style="{ color: healthScoreColor(entry.healthScore) }"
+                        >
+                            {{ entry.healthScore }}
+                        </span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm text-gray-700 dark:text-gray-200 truncate">{{ entry.summary }}</p>
+                            <p class="text-xs text-gray-400">{{ formatHistoryDate(entry.createdAt) }} · {{ entry.provider }}</p>
+                        </div>
+                        <i :class="['pi text-gray-400 text-xs', expandedHistoryId === entry.id ? 'pi-chevron-up' : 'pi-chevron-down']"></i>
+                    </button>
+
+                    <div v-if="expandedHistoryId === entry.id" class="px-4 pb-4 border-t border-gray-100 dark:border-gray-700 pt-3">
+                        <div v-if="entry.highlights?.length" class="space-y-2">
+                            <div
+                                v-for="(h, i) in entry.highlights"
+                                :key="i"
+                                class="flex items-start gap-2"
+                            >
+                                <i :class="[highlightIcon(h.type), highlightTextColor(h.type), 'text-sm mt-0.5']"></i>
+                                <div>
+                                    <span :class="['text-xs font-medium', highlightTextColor(h.type)]">{{ h.title }}</span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">{{ h.detail }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </AppLayout>
 </template>
