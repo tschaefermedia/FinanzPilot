@@ -63,12 +63,12 @@ INSTRUCTIONS;
             return null;
         }
 
-        $model = AiConfigService::model();
         $agent = (new self)->withSnapshot($snapshot);
 
-        $response = $model
-            ? $agent->model($model)->prompt('Gib eine kurze Finanzanalyse.')
-            : $agent->prompt('Gib eine kurze Finanzanalyse.');
+        $response = $agent->prompt(
+            'Gib eine kurze Finanzanalyse.',
+            model: AiConfigService::model(),
+        );
 
         return [
             'insights' => $response->text,

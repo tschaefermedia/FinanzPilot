@@ -125,12 +125,12 @@ INSTRUCTIONS;
             return null;
         }
 
-        $model = AiConfigService::model();
         $agent = (new self)->withSnapshot($snapshot);
 
-        $response = $model
-            ? $agent->model($model)->prompt('Analysiere die Finanzdaten.')
-            : $agent->prompt('Analysiere die Finanzdaten.');
+        $response = $agent->prompt(
+            'Analysiere die Finanzdaten.',
+            model: AiConfigService::model(),
+        );
 
         $structured = $response->toArray();
 
