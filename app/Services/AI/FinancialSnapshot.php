@@ -25,6 +25,7 @@ class FinancialSnapshot
         public readonly float $incomeStability,          // coefficient of variation (lower = more stable)
         public readonly array $categoryTrends,           // 12-month category trends
         public readonly array $anomalies,                // detected anomalies
+        public readonly bool $currentMonthComplete,      // false if salary hasn't arrived yet
         public readonly string $hash,                    // for caching
     ) {}
 
@@ -50,16 +51,21 @@ class FinancialSnapshot
             ->orderBy('month')
             ->get();
 
+        // Consider the current month incomplete if we're before the 28th
+        $currentMonthComplete = now()->day >= 28;
+
         // Normalize to ratios (income = 100)
-        $monthlyRatios = $monthly->map(function ($m) {
+        $monthlyRatios = $monthly->map(function ($m) use ($currentMonth, $currentMonthComplete) {
             $income = (float) $m->income;
             $expenses = (float) $m->expenses;
+            $isCurrentMonth = $m->month === $currentMonth;
 
             return [
                 'month' => $m->month,
                 'income' => 100,
                 'expenses' => $income > 0 ? round(($expenses / $income) * 100, 1) : 0,
                 'savings' => $income > 0 ? round((($income - $expenses) / $income) * 100, 1) : 0,
+                ...($isCurrentMonth && ! $currentMonthComplete ? ['incomplete' => true] : []),
             ];
         })->values()->toArray();
 
@@ -158,6 +164,7 @@ class FinancialSnapshot
             incomeStability: $incomeStability,
             categoryTrends: $categoryTrends,
             anomalies: $anomalies,
+            currentMonthComplete: $currentMonthComplete,
             hash: $hash,
         );
     }
@@ -419,9 +426,15 @@ class FinancialSnapshot
     {
         $lines = ["Finanzdaten (anonymisiert, alle Werte in Prozent vom Einkommen):\n"];
 
+        if (! $this->currentMonthComplete) {
+            $currentMonth = now()->format('Y-m');
+            $lines[] = "⚠ WICHTIG: Der aktuelle Monat ({$currentMonth}) ist noch unvollständig — das Gehalt kommt typischerweise am Monatsende. Die Werte dieses Monats sind NICHT repräsentativ und sollten bei der Bewertung des healthScore und der Trends NICHT berücksichtigt werden. Nutze die abgeschlossenen Monate.\n";
+        }
+
         $lines[] = 'Monatliche Übersicht (letzte 12 Monate):';
         foreach ($this->monthlyRatios as $m) {
-            $lines[] = "  {$m['month']}: Ausgaben={$m['expenses']}% vom Einkommen, Sparquote={$m['savings']}%";
+            $incomplete = ! empty($m['incomplete']) ? ' [UNVOLLSTÄNDIG]' : '';
+            $lines[] = "  {$m['month']}: Ausgaben={$m['expenses']}% vom Einkommen, Sparquote={$m['savings']}%{$incomplete}";
         }
 
         $lines[] = "\nAusgaben nach Kategorie (aktueller Monat):";

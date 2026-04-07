@@ -22,6 +22,7 @@ class AiAnalysisController extends Controller
             'aiEnabled' => AiConfigService::isEnabled(),
             'anomalies' => $snapshot->anomalies,
             'budgetUtilization' => $snapshot->budgetUtilization,
+            'currentMonthComplete' => $snapshot->currentMonthComplete,
             'history' => FinancialAnalyst::history(),
         ]);
     }
