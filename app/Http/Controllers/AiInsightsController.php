@@ -2,32 +2,51 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\AI\AiInsightsService;
+use App\Ai\Agents\DashboardInsights;
+use App\Services\AI\AiConfigService;
+use Illuminate\Support\Facades\Cache;
 
 class AiInsightsController extends Controller
 {
-    public function __construct(
-        private AiInsightsService $insightsService,
-    ) {}
-
     /**
      * Get AI insights (called via fetch from the dashboard).
      */
     public function index()
     {
-        $insights = $this->insightsService->getInsights();
-
-        if (! $insights) {
+        if (! AiConfigService::isEnabled()) {
             return response()->json([
                 'enabled' => false,
                 'message' => 'KI nicht konfiguriert. Gehe zu Einstellungen → KI-Konfiguration.',
             ]);
         }
 
-        return response()->json([
-            'enabled' => true,
-            ...$insights,
-        ]);
+        $cacheKey = 'ai_dashboard_insights';
+        $cached = Cache::get($cacheKey);
+        if ($cached) {
+            return response()->json(['enabled' => true, ...$cached]);
+        }
+
+        try {
+            $result = DashboardInsights::analyze();
+
+            if (! $result) {
+                return response()->json([
+                    'enabled' => false,
+                    'message' => 'Nicht genügend Daten für eine Analyse.',
+                ]);
+            }
+
+            Cache::put($cacheKey, $result, now()->addHours(24));
+
+            return response()->json(['enabled' => true, ...$result]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'enabled' => true,
+                'insights' => null,
+                'error' => 'KI-Analyse fehlgeschlagen: '.$e->getMessage(),
+                'provider' => AiConfigService::providerDisplayName(),
+            ]);
+        }
     }
 
     /**
@@ -35,18 +54,8 @@ class AiInsightsController extends Controller
      */
     public function refresh()
     {
-        $insights = $this->insightsService->refreshInsights();
+        Cache::forget('ai_dashboard_insights');
 
-        if (! $insights) {
-            return response()->json([
-                'enabled' => false,
-                'message' => 'KI nicht konfiguriert.',
-            ]);
-        }
-
-        return response()->json([
-            'enabled' => true,
-            ...$insights,
-        ]);
+        return $this->index();
     }
 }

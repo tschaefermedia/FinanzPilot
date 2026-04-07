@@ -11,6 +11,7 @@ const input = ref('');
 const loading = ref(false);
 const error = ref(null);
 const chatContainer = ref(null);
+const conversationId = ref(localStorage.getItem('ai_conversation_id') || null);
 
 const quickQuestions = [
     'Was sind meine größten Einsparpotenziale?',
@@ -20,8 +21,10 @@ const quickQuestions = [
 ];
 
 onMounted(async () => {
+    if (!conversationId.value) return;
+
     try {
-        const response = await csrfFetch('/api/ai/chat/history', { method: 'GET' });
+        const response = await csrfFetch(`/api/ai/chat/history?conversationId=${conversationId.value}`, { method: 'GET' });
         const data = await response.json();
         if (data.messages?.length) {
             messages.value = data.messages;
@@ -47,13 +50,21 @@ async function sendMessage(text = null) {
         const response = await csrfFetch('/api/ai/chat/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: msg }),
+            body: JSON.stringify({
+                message: msg,
+                conversationId: conversationId.value,
+            }),
         });
 
         const data = await response.json();
 
         if (data.success) {
             messages.value.push({ role: 'assistant', content: data.message });
+
+            if (data.conversationId && data.conversationId !== conversationId.value) {
+                conversationId.value = data.conversationId;
+                localStorage.setItem('ai_conversation_id', data.conversationId);
+            }
         } else {
             error.value = data.error || 'Fehler beim Senden der Nachricht.';
         }
@@ -67,9 +78,15 @@ async function sendMessage(text = null) {
 
 async function clearChat() {
     try {
-        await csrfFetch('/api/ai/chat/clear', { method: 'POST' });
+        await csrfFetch('/api/ai/chat/clear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversationId: conversationId.value }),
+        });
         messages.value = [];
         error.value = null;
+        conversationId.value = null;
+        localStorage.removeItem('ai_conversation_id');
     } catch (e) {
         // ignore
     }

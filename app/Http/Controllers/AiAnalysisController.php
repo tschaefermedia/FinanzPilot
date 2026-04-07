@@ -2,25 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Setting;
-use App\Services\AI\AiInsightsService;
+use App\Ai\Agents\FinancialAnalyst;
+use App\Services\AI\AiConfigService;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class AiAnalysisController extends Controller
 {
-    public function __construct(
-        private AiInsightsService $insightsService,
-    ) {}
-
     /**
      * Show the dedicated AI analysis page.
      */
     public function index()
     {
-        $aiEnabled = Setting::get('ai_provider', 'none') !== 'none';
-
         return Inertia::render('AI/Index', [
-            'aiEnabled' => $aiEnabled,
+            'aiEnabled' => AiConfigService::isEnabled(),
         ]);
     }
 
@@ -29,19 +24,42 @@ class AiAnalysisController extends Controller
      */
     public function insights()
     {
-        $insights = $this->insightsService->getStructuredInsights();
-
-        if (! $insights) {
+        if (! AiConfigService::isEnabled()) {
             return response()->json([
                 'enabled' => false,
                 'message' => 'KI nicht konfiguriert. Gehe zu Einstellungen → KI-Konfiguration.',
             ]);
         }
 
-        return response()->json([
-            'enabled' => true,
-            ...$insights,
-        ]);
+        // Check cache first
+        $cacheKey = 'ai_structured_insights';
+        $cached = Cache::get($cacheKey);
+        if ($cached) {
+            return response()->json(['enabled' => true, ...$cached]);
+        }
+
+        try {
+            $result = FinancialAnalyst::analyze();
+
+            if (! $result) {
+                return response()->json([
+                    'enabled' => false,
+                    'message' => 'Nicht genügend Daten für eine Analyse.',
+                ]);
+            }
+
+            Cache::put($cacheKey, $result, now()->addHours(24));
+
+            return response()->json(['enabled' => true, ...$result]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'enabled' => true,
+                'structured' => null,
+                'raw' => null,
+                'error' => 'KI-Analyse fehlgeschlagen: '.$e->getMessage(),
+                'provider' => AiConfigService::providerDisplayName(),
+            ]);
+        }
     }
 
     /**
@@ -49,18 +67,8 @@ class AiAnalysisController extends Controller
      */
     public function refresh()
     {
-        $insights = $this->insightsService->refreshStructuredInsights();
+        Cache::forget('ai_structured_insights');
 
-        if (! $insights) {
-            return response()->json([
-                'enabled' => false,
-                'message' => 'KI nicht konfiguriert.',
-            ]);
-        }
-
-        return response()->json([
-            'enabled' => true,
-            ...$insights,
-        ]);
+        return $this->insights();
     }
 }

@@ -2,15 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\AI\AiChatService;
+use App\Ai\Agents\FinancialChat;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AiChatController extends Controller
 {
-    public function __construct(
-        private AiChatService $chatService,
-    ) {}
-
     /**
      * Send a chat message.
      */
@@ -18,17 +15,19 @@ class AiChatController extends Controller
     {
         $validated = $request->validate([
             'message' => 'required|string|max:1000',
+            'conversationId' => 'nullable|string',
         ]);
 
         try {
-            $result = $this->chatService->sendMessage(
-                sessionId: $request->session()->getId(),
-                userMessage: $validated['message'],
+            $result = FinancialChat::chat(
+                message: $validated['message'],
+                conversationId: $validated['conversationId'] ?? null,
             );
 
             return response()->json([
                 'success' => true,
                 'message' => $result['message'],
+                'conversationId' => $result['conversationId'],
                 'provider' => $result['provider'],
             ]);
         } catch (\Throwable $e) {
@@ -40,24 +39,39 @@ class AiChatController extends Controller
     }
 
     /**
-     * Clear chat history.
+     * Clear a conversation.
      */
     public function clear(Request $request)
     {
-        $this->chatService->clearHistory($request->session()->getId());
+        $conversationId = $request->input('conversationId');
+
+        if ($conversationId) {
+            DB::table('agent_conversations')
+                ->where('conversation_id', $conversationId)
+                ->delete();
+        }
 
         return response()->json(['success' => true]);
     }
 
     /**
-     * Get current chat history.
+     * Get conversation history.
      */
     public function history(Request $request)
     {
-        $history = $this->chatService->getHistory($request->session()->getId());
+        $conversationId = $request->input('conversationId');
 
-        return response()->json([
-            'messages' => $history,
-        ]);
+        if (! $conversationId) {
+            return response()->json(['messages' => []]);
+        }
+
+        $messages = DB::table('agent_conversations')
+            ->where('conversation_id', $conversationId)
+            ->orderBy('id')
+            ->get(['role', 'content'])
+            ->map(fn ($m) => ['role' => $m->role, 'content' => $m->content])
+            ->toArray();
+
+        return response()->json(['messages' => $messages]);
     }
 }
