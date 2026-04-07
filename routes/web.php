@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AiAnalysisController;
+use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AiInsightsController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CategoryAnalysisController;
@@ -73,6 +74,11 @@ Route::delete('settings/clear-all', [SettingsController::class, 'clearAll'])->na
 Route::get('ai', [AiAnalysisController::class, 'index'])->name('ai.index');
 Route::get('api/ai/insights', [AiAnalysisController::class, 'insights'])->name('api.ai.insights');
 Route::post('api/ai/refresh', [AiAnalysisController::class, 'refresh'])->middleware('throttle:5,1')->name('api.ai.refresh');
+
+// AI Chat
+Route::get('api/ai/chat/history', [AiChatController::class, 'history'])->name('api.ai.chat.history');
+Route::post('api/ai/chat/send', [AiChatController::class, 'send'])->middleware('throttle:20,10')->name('api.ai.chat.send');
+Route::post('api/ai/chat/clear', [AiChatController::class, 'clear'])->name('api.ai.chat.clear');
 
 // AI Insights (JSON API for dashboard widget)
 Route::get('api/insights', [AiInsightsController::class, 'index'])->name('api.insights');

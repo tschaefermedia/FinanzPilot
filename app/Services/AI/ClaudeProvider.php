@@ -13,6 +13,13 @@ class ClaudeProvider implements AiProviderInterface
 
     public function chat(string $systemPrompt, string $userMessage, int $maxTokens = 1024): string
     {
+        return $this->chatWithHistory($systemPrompt, [
+            ['role' => 'user', 'content' => $userMessage],
+        ], $maxTokens);
+    }
+
+    public function chatWithHistory(string $systemPrompt, array $messages, int $maxTokens = 1024): string
+    {
         $response = Http::withHeaders([
             'x-api-key' => $this->apiKey,
             'anthropic-version' => '2023-06-01',
@@ -21,9 +28,7 @@ class ClaudeProvider implements AiProviderInterface
             'model' => $this->model,
             'max_tokens' => $maxTokens,
             'system' => $systemPrompt,
-            'messages' => [
-                ['role' => 'user', 'content' => $userMessage],
-            ],
+            'messages' => $messages,
         ]);
 
         if ($response->failed()) {
