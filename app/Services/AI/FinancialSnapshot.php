@@ -223,6 +223,22 @@ class FinancialSnapshot
             $projected = $dayOfMonth > 0 ? round(($spent / $dayOfMonth) * $daysInMonth, 2) : 0;
             $projectedPercent = $budget > 0 ? round(($projected / $budget) * 100, 1) : 0;
 
+            // Historical adherence (last 3 months)
+            $adherence = [];
+            for ($i = 1; $i <= 3; $i++) {
+                $histMonth = now()->subMonths($i)->format('Y-m');
+                $histSpent = Transaction::where('category_id', $category->id)
+                    ->where('amount', '<', 0)
+                    ->whereRaw("strftime('%Y-%m', date) = ?", [$histMonth])
+                    ->sum(DB::raw('ABS(amount)'));
+                $histPercent = $budget > 0 ? round(($histSpent / $budget) * 100, 1) : 0;
+                $adherence[] = [
+                    'month' => $histMonth,
+                    'status' => $histPercent > 110 ? 'over' : ($histPercent > 90 ? 'warning' : 'on_track'),
+                    'percent' => $histPercent,
+                ];
+            }
+
             $utilization[] = [
                 'category' => $category->name,
                 'budgetPercentOfIncome' => $currentIncome > 0 ? round(($budget / $currentIncome) * 100, 1) : 0,
@@ -230,6 +246,7 @@ class FinancialSnapshot
                 'projectedPercent' => $projectedPercent,
                 'monthProgress' => $monthProgress,
                 'status' => $projectedPercent > 110 ? 'over' : ($projectedPercent > 90 ? 'warning' : 'on_track'),
+                'history' => $adherence,
             ];
         }
 
@@ -446,7 +463,12 @@ class FinancialSnapshot
                     'warning' => '⚡ Grenzbereich',
                     default => '✓ Im Plan',
                 };
-                $lines[] = "  {$b['category']}: {$b['spentPercent']}% verbraucht, Prognose {$b['projectedPercent']}% [{$statusLabel}]";
+                $histLabels = implode(', ', array_map(
+                    fn ($h) => "{$h['month']}:{$h['percent']}%",
+                    $b['history'] ?? []
+                ));
+                $histStr = $histLabels ? " | Letzte 3 Monate: {$histLabels}" : '';
+                $lines[] = "  {$b['category']}: {$b['spentPercent']}% verbraucht, Prognose {$b['projectedPercent']}% [{$statusLabel}]{$histStr}";
             }
         }
 
