@@ -13,3 +13,8 @@
     --color-danger: #ef4444;
     --color-warning: #f59e0b;
 }
+
+.p-inputnumber-input {
+    width: 100%;
+    max-width: 100%;
+}
