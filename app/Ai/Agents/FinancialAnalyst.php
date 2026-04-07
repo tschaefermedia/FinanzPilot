@@ -15,7 +15,7 @@ use Laravel\Ai\Promptable;
 
 #[MaxTokens(3000)]
 #[Temperature(0.3)]
-#[Timeout(45)]
+#[Timeout(120)]
 class FinancialAnalyst implements Agent, HasStructuredOutput
 {
     use Promptable;
