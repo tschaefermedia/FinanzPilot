@@ -12,7 +12,7 @@ use Laravel\Ai\Promptable;
 
 #[MaxTokens(512)]
 #[Temperature(0.3)]
-#[Timeout(30)]
+#[Timeout(120)]
 class DashboardInsights implements Agent
 {
     use Promptable;

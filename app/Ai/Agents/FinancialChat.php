@@ -14,7 +14,7 @@ use Laravel\Ai\Promptable;
 
 #[MaxTokens(1024)]
 #[Temperature(0.5)]
-#[Timeout(45)]
+#[Timeout(120)]
 class FinancialChat implements Agent, Conversational
 {
     use Promptable, RemembersConversations;
