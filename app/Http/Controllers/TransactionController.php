@@ -18,7 +18,8 @@ class TransactionController extends Controller
             $search = '%'.$request->search.'%';
             $query->where(function ($q) use ($search) {
                 $q->where('description', 'like', $search)
-                    ->orWhere('counterparty', 'like', $search);
+                    ->orWhere('counterparty', 'like', $search)
+                    ->orWhereHas('category', fn ($cq) => $cq->where('name', 'like', $search));
             });
         }
 

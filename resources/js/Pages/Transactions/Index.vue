@@ -25,7 +25,13 @@ const props = defineProps({
 });
 
 const search = ref(props.filters.search || '');
+const categoryFilter = ref(props.filters.category_id ? Number(props.filters.category_id) : null);
 const accountFilter = ref(props.filters.account_id || null);
+
+const categoryOptions = props.categories.map(c => ({
+    id: c.id,
+    name: c.parent ? `${c.parent.name} → ${c.name}` : c.name,
+})).sort((a, b) => a.name.localeCompare(b.name, 'de'));
 
 const selectedIds = ref([]);
 const bulkAccountId = ref(null);
@@ -37,6 +43,7 @@ const sortOrder = ref(props.filters.sort_order === 'asc' ? 1 : -1);
 function buildParams(overrides = {}) {
     return {
         search: search.value || undefined,
+        category_id: categoryFilter.value || undefined,
         account_id: accountFilter.value || undefined,
         sort_field: sortField.value,
         sort_order: sortOrder.value === 1 ? 'asc' : 'desc',
@@ -137,6 +144,17 @@ function deleteTransaction(id) {
             <div class="p-4 border-b border-gray-100 dark:border-gray-700">
                 <div class="flex gap-3">
                     <InputText v-model="search" placeholder="Suchen..." class="w-full max-w-sm" @keyup.enter="applySearch" />
+                    <Select
+                        v-model="categoryFilter"
+                        :options="categoryOptions"
+                        optionLabel="name"
+                        optionValue="id"
+                        placeholder="Alle Kategorien"
+                        class="w-52"
+                        showClear
+                        filter
+                        @change="applySearch"
+                    />
                     <Select
                         v-model="accountFilter"
                         :options="accountFilterOptions"
