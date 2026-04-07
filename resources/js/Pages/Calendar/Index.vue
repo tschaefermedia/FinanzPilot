@@ -6,6 +6,7 @@ import EmptyState from '@/Components/EmptyState.vue';
 import { useFormatters } from '@/Composables/useFormatters.js';
 import { computed, ref } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
+
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
@@ -46,6 +47,13 @@ const form = useForm({
     category_id: null,
     account_id: null,
     notes: '',
+});
+
+const selectedCategory = computed({
+    get: () => form.category_id ? { [form.category_id]: true } : null,
+    set: (val) => {
+        form.category_id = val ? Number(Object.keys(val)[0]) : null;
+    },
 });
 
 function navigateMonth(direction) {
@@ -280,7 +288,7 @@ const currentSummary = computed(() => props.summary[props.selectedMonth] || { in
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Kategorie</label>
-                    <TreeSelect v-model="form.category_id" :options="categories" placeholder="Kategorie wählen" class="w-full" />
+                    <TreeSelect v-model="selectedCategory" :options="categories" placeholder="Kategorie wählen" class="w-full" selectionMode="single" />
                 </div>
 
                 <div>

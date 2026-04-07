@@ -219,12 +219,22 @@ PROMPT;
 
     private function parseJsonResponse(string $response): ?array
     {
-        // Strip markdown code fences if present
-        $cleaned = preg_replace('/^```(?:json)?\s*/m', '', $response);
-        $cleaned = preg_replace('/\s*```$/m', '', $cleaned);
-        $cleaned = trim($cleaned);
+        // Try to extract JSON from the response — AI may wrap it in code fences or add surrounding text
+        $cleaned = $response;
 
+        // Strip markdown code fences if present
+        if (preg_match('/```(?:json)?\s*\n?(.*?)\n?\s*```/s', $cleaned, $matches)) {
+            $cleaned = $matches[1];
+        }
+
+        // If still not valid JSON, try to find the first { ... } block
+        $cleaned = trim($cleaned);
         $decoded = json_decode($cleaned, true);
+
+        if (! is_array($decoded) && preg_match('/\{.*\}/s', $cleaned, $matches)) {
+            $decoded = json_decode($matches[0], true);
+        }
+
         if (! is_array($decoded)) {
             return null;
         }
