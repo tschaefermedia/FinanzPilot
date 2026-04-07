@@ -1,8 +1,17 @@
 {
-  "mcpServers": {
-    "finanzpilot": {
-      "command": "node",
-      "args": ["mcp-server/index.js"]
+    "mcpServers": {
+        "finanzpilot": {
+            "command": "node",
+            "args": [
+                "mcp-server/index.js"
+            ]
+        },
+        "laravel-boost": {
+            "command": "php",
+            "args": [
+                "artisan",
+                "boost:mcp"
+            ]
+        }
     }
-  }
 }
