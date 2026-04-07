@@ -62,7 +62,6 @@ INSTRUCTIONS;
             throw new \RuntimeException('KI nicht konfiguriert. Gehe zu Einstellungen → KI-Konfiguration.');
         }
 
-        $model = AiConfigService::model();
         $agent = new self;
 
         // Use a dummy user ID for single-user app
@@ -72,9 +71,10 @@ INSTRUCTIONS;
             $agent = $agent->continue($conversationId, as: (object) ['id' => $userId ?? 1]);
         }
 
-        $response = $model
-            ? $agent->model($model)->prompt($message)
-            : $agent->prompt($message);
+        $response = $agent->prompt(
+            $message,
+            model: AiConfigService::model(),
+        );
 
         return [
             'message' => $response->text,
