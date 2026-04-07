@@ -2,12 +2,12 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import EmptyState from '@/Components/EmptyState.vue';
+import ChatInterface from '@/Components/AI/ChatInterface.vue';
 import { useCsrfFetch } from '@/Composables/useCsrfFetch.js';
 import { useTheme } from '@/Composables/useTheme.js';
 import { ref, computed, onMounted, defineAsyncComponent } from 'vue';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
-import ProgressBar from 'primevue/progressbar';
 
 const VueApexCharts = defineAsyncComponent(() => import('vue3-apexcharts'));
 
@@ -495,16 +495,27 @@ function formatRawInsights(text) {
             </div>
 
             <!-- Provider info -->
-            <div v-if="data?.provider" class="text-xs text-gray-400 dark:text-gray-500 text-right">
+            <div v-if="data?.provider" class="text-xs text-gray-400 dark:text-gray-500 text-right mb-6">
                 Analyse von {{ data.provider }} · {{ data.generatedAt ? new Date(data.generatedAt).toLocaleString('de-DE') : '' }}
             </div>
+
+            <!-- Chat -->
+            <ChatInterface />
         </template>
 
         <!-- Raw text fallback -->
         <template v-else-if="data?.raw">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
                 <pre class="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200 font-sans leading-relaxed">{{ formatRawInsights(data.raw) }}</pre>
             </div>
+
+            <!-- Chat also available in raw fallback mode -->
+            <ChatInterface />
+        </template>
+
+        <!-- Chat when AI is enabled but no analysis yet (e.g. loading error then retry) -->
+        <template v-else-if="!loading && props.aiEnabled && !error">
+            <ChatInterface />
         </template>
     </AppLayout>
 </template>
