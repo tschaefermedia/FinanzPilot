@@ -2,6 +2,7 @@
 
 namespace App\Ai\Agents;
 
+use App\Models\AiInsight;
 use App\Services\AI\AiConfigService;
 use App\Services\AI\FinancialSnapshot;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -52,6 +53,7 @@ Regeln:
 - Fokussiere auf Trends und Veränderungen über die letzten 12 Monate, nicht auf statische Zahlen
 - Sei direkt und konkret, keine allgemeinen Spartipps
 - Beachte Budget-Auslastung, Einkommensstabilität und Auffälligkeiten in deiner Analyse
+- Wenn eine vorherige Analyse existiert, vergleiche die aktuelle Situation damit
 
 Regeln für die Antwort:
 - highlights: 2-4 Einträge, mindestens 1 positive und 1 warning/critical wenn zutreffend
@@ -63,6 +65,18 @@ INSTRUCTIONS;
 
         if ($this->snapshot) {
             $base .= "\n\n--- FINANZDATEN ---\n".$this->snapshot->toPromptContext();
+        }
+
+        // Include previous analysis for comparison
+        $previous = AiInsight::latest()->first();
+        if ($previous && $previous->structured_data) {
+            $prevScore = $previous->health_score ?? '?';
+            $prevTrend = $previous->health_trend ?? '?';
+            $prevSummary = $previous->structured_data['summary'] ?? '';
+            $prevDate = $previous->created_at->format('d.m.Y');
+            $base .= "\n\n--- VORHERIGE ANALYSE ({$prevDate}) ---\n";
+            $base .= "Health Score: {$prevScore}, Trend: {$prevTrend}\n";
+            $base .= "Zusammenfassung: {$prevSummary}";
         }
 
         return $base;
@@ -118,8 +132,19 @@ INSTRUCTIONS;
             ? $agent->model($model)->prompt('Analysiere die Finanzdaten.')
             : $agent->prompt('Analysiere die Finanzdaten.');
 
+        $structured = $response->toArray();
+
+        // Store in history
+        AiInsight::create([
+            'health_score' => $structured['healthScore'] ?? null,
+            'health_trend' => $structured['healthTrend'] ?? null,
+            'structured_data' => $structured,
+            'snapshot_hash' => $snapshot->hash,
+            'provider' => AiConfigService::providerDisplayName(),
+        ]);
+
         return [
-            'structured' => $response->toArray(),
+            'structured' => $structured,
             'provider' => AiConfigService::providerDisplayName(),
             'generatedAt' => now()->toIso8601String(),
             'snapshotHash' => $snapshot->hash,
@@ -134,5 +159,25 @@ INSTRUCTIONS;
                 'categoryTrends' => $snapshot->categoryTrends,
             ],
         ];
+    }
+
+    /**
+     * Get past analyses for the history timeline.
+     */
+    public static function history(int $limit = 10): array
+    {
+        return AiInsight::latest()
+            ->limit($limit)
+            ->get()
+            ->map(fn (AiInsight $insight) => [
+                'id' => $insight->id,
+                'healthScore' => $insight->health_score,
+                'healthTrend' => $insight->health_trend,
+                'summary' => $insight->structured_data['summary'] ?? null,
+                'highlights' => $insight->structured_data['highlights'] ?? [],
+                'provider' => $insight->provider,
+                'createdAt' => $insight->created_at->toIso8601String(),
+            ])
+            ->toArray();
     }
 }
