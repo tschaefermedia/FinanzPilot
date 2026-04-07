@@ -132,7 +132,7 @@ INSTRUCTIONS;
             model: AiConfigService::model(),
         );
 
-        $structured = $response->toArray();
+        $structured = self::normalize($response->toArray());
 
         // Store in history
         AiInsight::create([
@@ -179,5 +179,75 @@ INSTRUCTIONS;
                 'createdAt' => $insight->created_at->toIso8601String(),
             ])
             ->toArray();
+    }
+
+    /**
+     * Normalize AI response to ensure consistent structure regardless of model quality.
+     * Some models (e.g. Ollama/Gemma) return plain strings instead of objects for arrays.
+     */
+    private static function normalize(array $data): array
+    {
+        // Normalize highlights: string → {type: 'warning', title: '', detail: string}
+        if (isset($data['highlights']) && is_array($data['highlights'])) {
+            $data['highlights'] = array_map(function ($h) {
+                if (is_string($h)) {
+                    return ['type' => 'warning', 'title' => mb_substr($h, 0, 60).'…', 'detail' => $h];
+                }
+                if (is_array($h) && ! isset($h['type'])) {
+                    return ['type' => 'warning', 'title' => $h['title'] ?? '', 'detail' => $h['detail'] ?? ''];
+                }
+
+                return $h;
+            }, $data['highlights']);
+        }
+
+        // Normalize categoryInsights: string → {category: string, trend: 'stable', comment: ''}
+        if (isset($data['categoryInsights']) && is_array($data['categoryInsights'])) {
+            $data['categoryInsights'] = array_values(array_filter(array_map(function ($c) {
+                if (is_string($c)) {
+                    return ['category' => $c, 'trend' => 'stable', 'comment' => ''];
+                }
+                if (is_array($c) && ! isset($c['category'])) {
+                    return null;
+                }
+
+                return $c;
+            }, $data['categoryInsights'])));
+        }
+
+        // Normalize recommendations: string → {priority: 'medium', title: truncated, detail: string}
+        if (isset($data['recommendations']) && is_array($data['recommendations'])) {
+            $data['recommendations'] = array_map(function ($r) {
+                if (is_string($r)) {
+                    return ['priority' => 'medium', 'title' => mb_substr($r, 0, 60).'…', 'detail' => $r, 'impact' => ''];
+                }
+                if (is_array($r) && ! isset($r['priority'])) {
+                    return ['priority' => 'medium', 'title' => $r['title'] ?? '', 'detail' => $r['detail'] ?? '', 'impact' => $r['impact'] ?? ''];
+                }
+
+                return $r;
+            }, $data['recommendations']);
+        }
+
+        // Normalize loanInsights: flatten nested objects → {loan: string, comment: string}
+        if (isset($data['loanInsights']) && is_array($data['loanInsights'])) {
+            $normalized = [];
+            foreach ($data['loanInsights'] as $l) {
+                if (is_array($l) && isset($l['loan']) && isset($l['comment'])) {
+                    $normalized[] = $l;
+                } elseif (is_array($l)) {
+                    // Flatten {Kredit A: {Fortschritt: "19.5%"}, Kredit B: ...} format
+                    foreach ($l as $name => $info) {
+                        $comment = is_array($info) ? implode(', ', array_map(fn ($k, $v) => "{$k}: {$v}", array_keys($info), array_values($info))) : (string) $info;
+                        $normalized[] = ['loan' => $name, 'comment' => $comment];
+                    }
+                } elseif (is_string($l)) {
+                    $normalized[] = ['loan' => $l, 'comment' => ''];
+                }
+            }
+            $data['loanInsights'] = $normalized;
+        }
+
+        return $data;
     }
 }
