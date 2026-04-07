@@ -18,6 +18,7 @@ const props = defineProps({
     aiEnabled: { type: Boolean, default: false },
     anomalies: { type: Array, default: () => [] },
     budgetUtilization: { type: Array, default: () => [] },
+    currentMonthComplete: { type: Boolean, default: true },
     history: { type: Array, default: () => [] },
 });
 
@@ -252,6 +253,12 @@ function anomalyLabel(a) {
     return '';
 }
 
+// Check if title is just a prefix/duplicate of detail
+function isTitleRedundant(title, detail) {
+    if (!title || !detail) return true;
+    return detail.startsWith(title.replace(/\.{3}$|…$/, ''));
+}
+
 // History helpers
 function healthScoreColor(score) {
     if (score >= 80) return '#22c55e';
@@ -288,6 +295,16 @@ function formatRawInsights(text) {
                 size="small"
                 @click="fetchInsights(true)"
             />
+        </div>
+
+        <!-- Incomplete month warning -->
+        <div v-if="!props.currentMonthComplete" class="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3">
+            <div class="flex items-center gap-2">
+                <i class="pi pi-info-circle text-blue-500"></i>
+                <p class="text-sm text-blue-700 dark:text-blue-400">
+                    Der aktuelle Monat ist noch unvollständig — Gehaltseingänge am Monatsende sind noch nicht erfasst. Die Analyse basiert auf den abgeschlossenen Monaten.
+                </p>
+            </div>
         </div>
 
         <!-- Standalone Anomalies (instant, no AI needed) -->
@@ -444,8 +461,8 @@ function formatRawInsights(text) {
                         <div class="flex items-start gap-3">
                             <i :class="[highlightIcon(h.type), highlightTextColor(h.type), 'text-lg mt-0.5']"></i>
                             <div>
-                                <p :class="['font-medium text-sm', highlightTextColor(h.type)]">{{ h.title }}</p>
-                                <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">{{ h.detail }}</p>
+                                <p v-if="!isTitleRedundant(h.title, h.detail)" :class="['font-medium text-sm', highlightTextColor(h.type)]">{{ h.title }}</p>
+                                <p class="text-sm text-gray-600 dark:text-gray-300" :class="{ 'mt-1': !isTitleRedundant(h.title, h.detail) }">{{ h.detail }}</p>
                             </div>
                         </div>
                     </div>
@@ -464,7 +481,7 @@ function formatRawInsights(text) {
                             <i :class="[categoryTrendIcon(c.trend), 'mt-0.5']"></i>
                             <div>
                                 <p class="text-sm font-medium text-gray-900 dark:text-white">{{ c.category }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ c.comment }}</p>
+                                <p v-if="c.comment" class="text-xs text-gray-500 dark:text-gray-400">{{ c.comment }}</p>
                             </div>
                         </div>
                     </div>
@@ -542,7 +559,7 @@ function formatRawInsights(text) {
                     >
                         <div class="flex items-center gap-2 mb-2">
                             <Tag :value="r.priority === 'high' ? 'Hoch' : r.priority === 'medium' ? 'Mittel' : 'Niedrig'" :severity="priorityColor(r.priority)" />
-                            <span class="text-sm font-medium text-gray-900 dark:text-white">{{ r.title }}</span>
+                            <span v-if="!isTitleRedundant(r.title, r.detail)" class="text-sm font-medium text-gray-900 dark:text-white">{{ r.title }}</span>
                         </div>
                         <p class="text-sm text-gray-600 dark:text-gray-300">{{ r.detail }}</p>
                         <p v-if="r.impact" class="text-xs text-purple-600 dark:text-purple-400 mt-2">

@@ -54,6 +54,7 @@ Regeln:
 - Sei direkt und konkret, keine allgemeinen Spartipps
 - Beachte Budget-Auslastung, Einkommensstabilität und Auffälligkeiten in deiner Analyse
 - Wenn eine vorherige Analyse existiert, vergleiche die aktuelle Situation damit
+- Wenn der aktuelle Monat als UNVOLLSTÄNDIG markiert ist, ignoriere dessen Werte für den healthScore und die Trendberechnung — das Gehalt kommt am Monatsende, daher sind die Werte nicht repräsentativ. Bewerte nur abgeschlossene Monate.
 
 Regeln für die Antwort:
 - highlights: 2-4 Einträge, mindestens 1 positive und 1 warning/critical wenn zutreffend
@@ -157,6 +158,7 @@ INSTRUCTIONS;
                 'incomeStability' => $snapshot->incomeStability,
                 'anomalies' => $snapshot->anomalies,
                 'categoryTrends' => $snapshot->categoryTrends,
+                'currentMonthComplete' => $snapshot->currentMonthComplete,
             ],
         ];
     }
@@ -187,11 +189,11 @@ INSTRUCTIONS;
      */
     private static function normalize(array $data): array
     {
-        // Normalize highlights: string → {type: 'warning', title: '', detail: string}
+        // Normalize highlights: string → {type: 'warning', title: first sentence, detail: full text}
         if (isset($data['highlights']) && is_array($data['highlights'])) {
             $data['highlights'] = array_map(function ($h) {
                 if (is_string($h)) {
-                    return ['type' => 'warning', 'title' => mb_substr($h, 0, 60).'…', 'detail' => $h];
+                    return ['type' => 'warning', 'title' => self::extractTitle($h), 'detail' => $h];
                 }
                 if (is_array($h) && ! isset($h['type'])) {
                     return ['type' => 'warning', 'title' => $h['title'] ?? '', 'detail' => $h['detail'] ?? ''];
@@ -215,11 +217,11 @@ INSTRUCTIONS;
             }, $data['categoryInsights'])));
         }
 
-        // Normalize recommendations: string → {priority: 'medium', title: truncated, detail: string}
+        // Normalize recommendations: string → {priority: 'medium', title: first sentence, detail: full text}
         if (isset($data['recommendations']) && is_array($data['recommendations'])) {
             $data['recommendations'] = array_map(function ($r) {
                 if (is_string($r)) {
-                    return ['priority' => 'medium', 'title' => mb_substr($r, 0, 60).'…', 'detail' => $r, 'impact' => ''];
+                    return ['priority' => 'medium', 'title' => self::extractTitle($r), 'detail' => $r, 'impact' => ''];
                 }
                 if (is_array($r) && ! isset($r['priority'])) {
                     return ['priority' => 'medium', 'title' => $r['title'] ?? '', 'detail' => $r['detail'] ?? '', 'impact' => $r['impact'] ?? ''];
@@ -249,5 +251,31 @@ INSTRUCTIONS;
         }
 
         return $data;
+    }
+
+    /**
+     * Extract a short title from a longer text (first sentence or clause).
+     */
+    private static function extractTitle(string $text): string
+    {
+        // Try splitting on first period followed by space
+        if (preg_match('/^(.{20,80}?)\.\s/', $text, $m)) {
+            return $m[1].'.';
+        }
+
+        // Try splitting on first comma followed by space (if short enough)
+        if (preg_match('/^(.{15,60}?),\s/', $text, $m)) {
+            return $m[1];
+        }
+
+        // Fallback: truncate at word boundary
+        if (mb_strlen($text) > 70) {
+            $truncated = mb_substr($text, 0, 70);
+            $lastSpace = mb_strrpos($truncated, ' ');
+
+            return $lastSpace ? mb_substr($truncated, 0, $lastSpace).'...' : $truncated.'...';
+        }
+
+        return $text;
     }
 }
