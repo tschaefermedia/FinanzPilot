@@ -50,7 +50,7 @@ INSTRUCTIONS;
     public function schema(JsonSchema $schema): array
     {
         return [
-            'loanInsights' => $schema->array($schema->object([
+            'loanInsights' => $schema->array()->items($schema->object([
                 'loan' => $schema->string()->required(),
                 'comment' => $schema->string()->required(),
             ]))->required(),

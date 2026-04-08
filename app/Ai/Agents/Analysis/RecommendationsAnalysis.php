@@ -62,7 +62,7 @@ INSTRUCTIONS;
     public function schema(JsonSchema $schema): array
     {
         return [
-            'recommendations' => $schema->array($schema->object([
+            'recommendations' => $schema->array()->items($schema->object([
                 'priority' => $schema->string()->enum(['high', 'medium', 'low'])->required(),
                 'title' => $schema->string()->required(),
                 'detail' => $schema->string()->required(),

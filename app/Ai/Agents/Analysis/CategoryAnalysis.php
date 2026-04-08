@@ -50,7 +50,7 @@ INSTRUCTIONS;
     public function schema(JsonSchema $schema): array
     {
         return [
-            'categoryInsights' => $schema->array($schema->object([
+            'categoryInsights' => $schema->array()->items($schema->object([
                 'category' => $schema->string()->required(),
                 'trend' => $schema->string()->enum(['rising', 'stable', 'falling'])->required(),
                 'comment' => $schema->string()->required(),
