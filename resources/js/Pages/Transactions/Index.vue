@@ -4,22 +4,30 @@ import PageHeader from '@/Components/PageHeader.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import { useFormatters } from '@/Composables/useFormatters.js';
 import { Link, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import Select from 'primevue/select';
 import Checkbox from 'primevue/checkbox';
+import Dialog from 'primevue/dialog';
+import DatePicker from 'primevue/datepicker';
+import TreeSelect from 'primevue/treeselect';
+import ToggleSwitch from 'primevue/toggleswitch';
 
-const { formatCurrency, formatDate } = useFormatters();
+const { formatCurrency, formatDate, formatDateForSubmit } = useFormatters();
 const confirm = useConfirm();
+const toast = useToast();
 
 const props = defineProps({
     transactions: { type: Object, default: () => ({ data: [], links: [], meta: {} }) },
     categories: { type: Array, default: () => [] },
+    categoryTree: { type: Array, default: () => [] },
     filters: { type: Object, default: () => ({}) },
     accounts: { type: Array, default: () => [] },
 });
@@ -39,6 +47,67 @@ const bulkAccountId = ref(null);
 const sortFieldMap = { date: 'date', amount: 'amount', description: 'description' };
 const sortField = ref(props.filters.sort_field || 'date');
 const sortOrder = ref(props.filters.sort_order === 'asc' ? 1 : -1);
+
+// Recurring template dialog
+const showRecurringDialog = ref(false);
+const recurringSubmitting = ref(false);
+const recurringForm = ref({
+    description: '',
+    amount: null,
+    category_id: null,
+    account_id: null,
+    frequency: 'monthly',
+    next_due_date: null,
+    is_active: true,
+    auto_generate: false,
+});
+
+const selectedRecurringCategory = computed({
+    get: () => recurringForm.value.category_id ? { [recurringForm.value.category_id]: true } : null,
+    set: (val) => {
+        recurringForm.value.category_id = val ? Number(Object.keys(val)[0]) : null;
+    },
+});
+
+const frequencyOptions = [
+    { label: 'Wöchentlich', value: 'weekly' },
+    { label: 'Monatlich', value: 'monthly' },
+    { label: 'Vierteljährlich', value: 'quarterly' },
+    { label: 'Jährlich', value: 'yearly' },
+];
+
+function openRecurringDialog(transaction) {
+    recurringForm.value = {
+        description: transaction.description,
+        amount: parseFloat(transaction.amount),
+        category_id: transaction.category?.id ?? null,
+        account_id: transaction.account?.id ?? null,
+        frequency: 'monthly',
+        next_due_date: new Date(transaction.date),
+        is_active: true,
+        auto_generate: false,
+    };
+    showRecurringDialog.value = true;
+}
+
+function submitRecurring() {
+    recurringSubmitting.value = true;
+    const data = {
+        ...recurringForm.value,
+        next_due_date: formatDateForSubmit(recurringForm.value.next_due_date),
+    };
+
+    router.post('/recurring', data, {
+        preserveScroll: true,
+        onSuccess: () => {
+            showRecurringDialog.value = false;
+            toast.add({ severity: 'success', summary: 'Erfolg', detail: 'Dauerauftrag erstellt.', life: 3000 });
+        },
+        onFinish: () => {
+            recurringSubmitting.value = false;
+        },
+    });
+}
 
 function buildParams(overrides = {}) {
     return {
@@ -221,9 +290,10 @@ function deleteTransaction(id) {
                         <span v-else class="text-gray-300 dark:text-gray-500 text-xs">—</span>
                     </template>
                 </Column>
-                <Column style="width: 60px">
+                <Column style="width: 90px">
                     <template #body="{ data }">
-                        <div @click.stop>
+                        <div @click.stop class="flex gap-1">
+                            <Button icon="pi pi-replay" text rounded size="small" severity="secondary" title="Als Dauerauftrag erstellen" @click="openRecurringDialog(data)" />
                             <Button icon="pi pi-trash" text rounded size="small" severity="danger" @click="deleteTransaction(data.id)" />
                         </div>
                     </template>
@@ -235,5 +305,57 @@ function deleteTransaction(id) {
                 </Link>
             </EmptyState>
         </div>
+
+        <!-- Create Recurring Template Dialog -->
+        <Dialog v-model:visible="showRecurringDialog" header="Dauerauftrag erstellen" modal :style="{ width: '450px' }">
+            <form @submit.prevent="submitRecurring" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Beschreibung</label>
+                    <InputText v-model="recurringForm.description" class="w-full" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Betrag</label>
+                    <InputNumber v-model="recurringForm.amount" class="w-full" mode="currency" currency="EUR" locale="de-DE" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Kategorie</label>
+                    <TreeSelect v-model="selectedRecurringCategory" :options="categoryTree" placeholder="Kategorie wählen" class="w-full" selectionMode="single" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Konto</label>
+                    <Select v-model="recurringForm.account_id" :options="accounts" optionLabel="name" optionValue="id" placeholder="Kein Konto" class="w-full" showClear />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Frequenz</label>
+                        <Select v-model="recurringForm.frequency" :options="frequencyOptions" optionLabel="label" optionValue="value" class="w-full" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Nächstes Datum</label>
+                        <DatePicker v-model="recurringForm.next_due_date" dateFormat="dd.mm.yy" class="w-full" showIcon />
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-6">
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                        <ToggleSwitch v-model="recurringForm.is_active" />
+                        Aktiv
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                        <ToggleSwitch v-model="recurringForm.auto_generate" />
+                        Automatisch erstellen
+                    </label>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <Button label="Abbrechen" severity="secondary" size="small" @click="showRecurringDialog = false" />
+                    <Button type="submit" label="Dauerauftrag erstellen" icon="pi pi-replay" size="small" :loading="recurringSubmitting" />
+                </div>
+            </form>
+        </Dialog>
     </AppLayout>
 </template>
