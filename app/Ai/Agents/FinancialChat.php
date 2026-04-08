@@ -2,53 +2,66 @@
 
 namespace App\Ai\Agents;
 
+use App\Ai\Tools\GetBudgetStatus;
+use App\Ai\Tools\GetCategoryBreakdown;
+use App\Ai\Tools\GetLoanDetails;
+use App\Ai\Tools\SearchTransactions;
 use App\Services\AI\AiConfigService;
 use App\Services\AI\FinancialSnapshot;
+use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Attributes\MaxTokens;
 use Laravel\Ai\Attributes\Temperature;
 use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
+use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Promptable;
 
 #[MaxTokens(1024)]
+#[MaxSteps(5)]
 #[Temperature(0.5)]
 #[Timeout(120)]
-class FinancialChat implements Agent, Conversational
+class FinancialChat implements Agent, Conversational, HasTools
 {
     use Promptable, RemembersConversations;
 
     public function instructions(): string
     {
         $snapshot = FinancialSnapshot::capture();
+        $stabilityLabel = $snapshot->incomeStability < 10 ? 'sehr stabil' : ($snapshot->incomeStability < 25 ? 'mäßig stabil' : 'schwankend');
+        $monthCount = count($snapshot->monthlyRatios);
 
-        $base = <<<'INSTRUCTIONS'
-Du bist der Finanzassistent von FinanzPilot. Der Nutzer stellt dir Fragen zu seinen Finanzen. Du hast Zugriff auf seine anonymisierten Finanzdaten (siehe Kontext unten).
+        return <<<INSTRUCTIONS
+Du bist der Finanzassistent von FinanzPilot. Der Nutzer stellt dir Fragen zu seinen Finanzen.
 
-FinanzPilot bietet diese Funktionen:
-- Übersicht (Dashboard mit Monatsvergleich und Diagrammen)
-- Konten (Kontoverwaltung und Salden)
-- Buchungen (Transaktionsliste mit Filterung)
-- Kategorien (hierarchische Kategorien mit optionalen Monatsbudgets)
-- Import (CSV-Import von Bankauszügen)
-- Darlehen (Kreditverwaltung mit Tilgungsplan und Zahlungszuordnung)
-- Daueraufträge (wiederkehrende Buchungen)
-- Export (Excel-Export für Steuerberater)
-- KI-Analyse (Finanzübersicht, Trends, Empfehlungen)
+Du hast Werkzeuge um Finanzdaten abzurufen — nutze sie um präzise Antworten zu geben.
+
+Kurzübersicht:
+- Sparquote: {$snapshot->savingsRate}%
+- Einkommensstabilität: {$stabilityLabel}
+- Buchungen: {$snapshot->transactionCount} im aktuellen Monat
+- Datenspanne: {$monthCount} Monate
 
 Regeln:
 - Nenne nur Prozentangaben — niemals absolute Beträge oder Euro-Werte
-- Beziehe dich ausschließlich auf die oben gelisteten Funktionen — erfinde keine neuen
-- Verwende keine echten Namen aus den Daten — die Daten sind anonymisiert (z.B. "Kredit A")
+- Verwende keine echten Namen — die Daten sind anonymisiert
 - Empfehle keine externen Tools oder Apps
 - Sei direkt, konkret und hilfreich
-- Antworte in klarem Deutsch, formatiere mit Markdown wenn hilfreich
-- Halte Antworten auf 100-200 Wörter, es sei denn der Nutzer fragt nach mehr Detail
-- Wenn der Nutzer nach etwas fragt, das nicht in den Finanzdaten enthalten ist, sage das ehrlich
+- Antworte in klarem Deutsch, formatiere mit **fett** für Betonung
+- Halte Antworten auf 100-200 Wörter
+- Nutze die Werkzeuge um Daten nachzuschlagen statt zu raten
 INSTRUCTIONS;
+    }
 
-        return $base."\n\n--- FINANZDATEN ---\n".$snapshot->toPromptContext();
+    public function tools(): iterable
+    {
+        return [
+            new SearchTransactions,
+            new GetBudgetStatus,
+            new GetCategoryBreakdown,
+            new GetLoanDetails,
+        ];
     }
 
     /**

@@ -28,7 +28,7 @@ class AiAnalysisController extends Controller
     }
 
     /**
-     * Fetch structured AI insights (called via fetch from the page).
+     * Fetch cached AI insights (no AI call — cache-only).
      */
     public function insights()
     {
@@ -39,44 +39,49 @@ class AiAnalysisController extends Controller
             ]);
         }
 
-        // Check cache first
-        $cacheKey = 'ai_structured_insights';
-        $cached = Cache::get($cacheKey);
+        $cached = Cache::get('ai_structured_insights');
         if ($cached) {
             return response()->json(['enabled' => true, ...$cached]);
         }
+
+        return response()->json(['enabled' => true, 'structured' => null]);
+    }
+
+    /**
+     * Trigger a new AI analysis (the only path that calls the AI).
+     */
+    public function refresh()
+    {
+        if (! AiConfigService::isEnabled()) {
+            return response()->json([
+                'enabled' => false,
+                'message' => 'KI nicht konfiguriert.',
+            ]);
+        }
+
+        Cache::forget('ai_structured_insights');
 
         try {
             $result = FinancialAnalyst::analyze();
 
             if (! $result) {
                 return response()->json([
-                    'enabled' => false,
-                    'message' => 'Nicht genügend Daten für eine Analyse.',
+                    'enabled' => true,
+                    'structured' => null,
+                    'error' => 'Nicht genügend Daten für eine Analyse.',
                 ]);
             }
 
-            Cache::put($cacheKey, $result, now()->addHours(24));
+            Cache::put('ai_structured_insights', $result, now()->addHours(24));
 
             return response()->json(['enabled' => true, ...$result]);
         } catch (\Throwable $e) {
             return response()->json([
                 'enabled' => true,
                 'structured' => null,
-                'raw' => null,
                 'error' => 'KI-Analyse fehlgeschlagen: '.$e->getMessage(),
                 'provider' => AiConfigService::providerDisplayName(),
             ]);
         }
-    }
-
-    /**
-     * Refresh structured AI insights (bypass cache).
-     */
-    public function refresh()
-    {
-        Cache::forget('ai_structured_insights');
-
-        return $this->insights();
     }
 }

@@ -526,4 +526,90 @@ class FinancialSnapshot
 
         return implode("\n", $lines);
     }
+
+    public function toHealthContext(): string
+    {
+        $lines = ['Monatliche Übersicht:'];
+        foreach ($this->monthlyRatios as $m) {
+            $incomplete = ! empty($m['incomplete']) ? ' [UNVOLLSTÄNDIG]' : '';
+            $lines[] = "  {$m['month']}: Ausgaben={$m['expenses']}%, Sparquote={$m['savings']}%{$incomplete}";
+        }
+        $refMonth = $this->currentMonthComplete ? now()->format('Y-m') : now()->subMonth()->format('Y-m');
+        $lines[] = "\nSparquote ({$refMonth}): {$this->savingsRate}%";
+        $stabilityLabel = $this->incomeStability < 10 ? 'sehr stabil' : ($this->incomeStability < 25 ? 'mäßig stabil' : 'schwankend');
+        $lines[] = "Einkommensstabilität: {$stabilityLabel} (CV {$this->incomeStability}%)";
+        if (! $this->currentMonthComplete) {
+            $lines[] = "\n⚠ Aktueller Monat unvollständig — Gehalt kommt am Monatsende. Nicht für Bewertung nutzen.";
+        }
+
+        return implode("\n", $lines);
+    }
+
+    public function toHighlightsContext(): string
+    {
+        $lines = ['Monatliche Übersicht:'];
+        foreach ($this->monthlyRatios as $m) {
+            $incomplete = ! empty($m['incomplete']) ? ' [UNVOLLSTÄNDIG]' : '';
+            $lines[] = "  {$m['month']}: Ausgaben={$m['expenses']}%, Sparquote={$m['savings']}%{$incomplete}";
+        }
+        if (! empty($this->budgetUtilization)) {
+            $lines[] = "\nBudgets:";
+            foreach ($this->budgetUtilization as $b) {
+                $lines[] = "  {$b['category']}: {$b['spentPercent']}% verbraucht, Prognose {$b['projectedPercent']}%";
+            }
+        }
+        if (! empty($this->anomalies)) {
+            $lines[] = "\nAuffälligkeiten:";
+            foreach ($this->anomalies as $a) {
+                match ($a['type']) {
+                    'large_transaction' => $lines[] = "  - Große Buchung in {$a['category']}: {$a['factor']}x über Durchschnitt",
+                    'category_spike' => $lines[] = "  - {$a['category']}: {$a['aboveAverage']}% über 3-Monats-Durchschnitt",
+                    'new_category' => $lines[] = "  - Neue Kategorie: {$a['category']}",
+                    default => null,
+                };
+            }
+        }
+        if (! $this->currentMonthComplete) {
+            $lines[] = "\n⚠ Aktueller Monat unvollständig — nicht für Bewertung nutzen.";
+        }
+
+        return implode("\n", $lines);
+    }
+
+    public function toCategoryContext(): string
+    {
+        $lines = ['Ausgaben nach Kategorie:'];
+        foreach ($this->categoryShares as $c) {
+            $lines[] = "  {$c['category']}: {$c['share']}%";
+        }
+        if (! empty($this->categoryTrends)) {
+            $lines[] = "\nKategorie-Trends (% vom Einkommen):";
+            foreach ($this->categoryTrends as $trend) {
+                $values = implode(', ', array_map(fn ($m) => "{$m['month']}:{$m['percentOfIncome']}%", $trend['months']));
+                $lines[] = "  {$trend['category']}: {$values}";
+            }
+        }
+        if (! empty($this->budgetUtilization)) {
+            $lines[] = "\nBudgets:";
+            foreach ($this->budgetUtilization as $b) {
+                $lines[] = "  {$b['category']}: {$b['spentPercent']}% verbraucht";
+            }
+        }
+
+        return implode("\n", $lines);
+    }
+
+    public function toLoanContext(): string
+    {
+        if (empty($this->loanSummary)) {
+            return 'Keine Kredite vorhanden.';
+        }
+        $lines = ["Kredite ({$this->loanSummary['count']}):"];
+        foreach ($this->loanSummary['loans'] as $loan) {
+            $lines[] = "  {$loan['name']}: {$loan['type']}, {$loan['direction']}, Fortschritt {$loan['progressPercent']}%, Rate {$loan['monthlyPercent']}% vom Einkommen";
+        }
+        $lines[] = "Gesamte monatliche Kreditbelastung: {$this->loanSummary['monthlyBurdenPercent']}% vom Einkommen";
+
+        return implode("\n", $lines);
+    }
 }
