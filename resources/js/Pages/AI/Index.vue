@@ -259,6 +259,26 @@ const hasCategoryComments = computed(() => {
     return structured.value?.categoryInsights?.some(c => c.comment?.trim());
 });
 
+// Monthly comparison: last two complete months
+const monthlyComparison = computed(() => {
+    const ratios = snapshot.value?.monthlyRatios?.filter(m => !m.incomplete) ?? [];
+    if (ratios.length < 2) return null;
+    const current = ratios[ratios.length - 1];
+    const previous = ratios[ratios.length - 2];
+    return {
+        currentMonth: current.month,
+        previousMonth: previous.month,
+        savingsRate: current.savings,
+        prevSavingsRate: previous.savings,
+        savingsChange: +(current.savings - previous.savings).toFixed(1),
+        expenses: current.expenses,
+        prevExpenses: previous.expenses,
+        expensesChange: +(current.expenses - previous.expenses).toFixed(1),
+        growing: snapshot.value?.topGrowingCategories ?? [],
+        shrinking: snapshot.value?.topShrinkingCategories ?? [],
+    };
+});
+
 // Check if title is just a prefix/duplicate of detail
 function isTitleRedundant(title, detail) {
     if (!title || !detail) return true;
@@ -541,6 +561,68 @@ function renderMarkdown(text) {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Monthly Comparison (shown when no budgets exist) -->
+                <div v-else-if="monthlyComparison" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">
+                        <i class="pi pi-arrow-right-arrow-left text-cyan-500 mr-1"></i>
+                        Monatsvergleich
+                        <span class="font-normal text-xs text-gray-400 ml-1">{{ monthlyComparison.previousMonth }} → {{ monthlyComparison.currentMonth }}</span>
+                    </h3>
+
+                    <div class="space-y-4">
+                        <!-- Savings rate -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600 dark:text-gray-300">Sparquote</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ monthlyComparison.savingsRate }}%</span>
+                                <span :class="['text-xs font-medium', monthlyComparison.savingsChange >= 0 ? 'text-green-500' : 'text-red-500']">
+                                    <i :class="monthlyComparison.savingsChange >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'" class="text-[10px]"></i>
+                                    {{ Math.abs(monthlyComparison.savingsChange) }}%
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Expenses -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600 dark:text-gray-300">Ausgaben</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ monthlyComparison.expenses }}%</span>
+                                <span :class="['text-xs font-medium', monthlyComparison.expensesChange <= 0 ? 'text-green-500' : 'text-red-500']">
+                                    <i :class="monthlyComparison.expensesChange <= 0 ? 'pi pi-arrow-down' : 'pi pi-arrow-up'" class="text-[10px]"></i>
+                                    {{ Math.abs(monthlyComparison.expensesChange) }}%
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Divider -->
+                        <div class="border-t border-gray-100 dark:border-gray-700"></div>
+
+                        <!-- Growing categories -->
+                        <div v-if="monthlyComparison.growing.length">
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Gestiegen</p>
+                            <div class="space-y-1.5">
+                                <div v-for="c in monthlyComparison.growing" :key="c.category" class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-700 dark:text-gray-200">{{ c.category }}</span>
+                                    <span class="text-xs font-medium text-red-500">+{{ c.change }}%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Shrinking categories -->
+                        <div v-if="monthlyComparison.shrinking.length">
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Gesunken</p>
+                            <div class="space-y-1.5">
+                                <div v-for="c in monthlyComparison.shrinking" :key="c.category" class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-700 dark:text-gray-200">{{ c.category }}</span>
+                                    <span class="text-xs font-medium text-green-500">{{ c.change }}%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p v-if="!monthlyComparison.growing.length && !monthlyComparison.shrinking.length" class="text-xs text-gray-400">Keine auffälligen Kategorie-Veränderungen.</p>
                     </div>
                 </div>
             </div>

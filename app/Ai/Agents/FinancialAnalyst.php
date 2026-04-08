@@ -70,6 +70,8 @@ class FinancialAnalyst
                 'monthlyRatios' => $snapshot->monthlyRatios,
                 'savingsRate' => $snapshot->savingsRate,
                 'savingsRateTrend' => $snapshot->savingsRateTrend,
+                'topGrowingCategories' => $snapshot->topGrowingCategories,
+                'topShrinkingCategories' => $snapshot->topShrinkingCategories,
                 'budgetUtilization' => $snapshot->budgetUtilization,
                 'recurringCoveragePercent' => $snapshot->recurringCoveragePercent,
                 'incomeStability' => $snapshot->incomeStability,
