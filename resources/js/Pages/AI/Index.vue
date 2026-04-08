@@ -253,6 +253,11 @@ function anomalyLabel(a) {
     return '';
 }
 
+// Hide categories section when all comments are empty
+const hasCategoryComments = computed(() => {
+    return structured.value?.categoryInsights?.some(c => c.comment?.trim());
+});
+
 // Check if title is just a prefix/duplicate of detail
 function isTitleRedundant(title, detail) {
     if (!title || !detail) return true;
@@ -471,7 +476,7 @@ function formatRawInsights(text) {
 
             <!-- Category Insights + Budget Utilization -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <div v-if="structured.categoryInsights?.length" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                <div v-if="hasCategoryComments" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
                         <i class="pi pi-tags text-blue-500 mr-1"></i>
                         Kategorien
