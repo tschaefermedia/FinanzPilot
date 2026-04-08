@@ -54,6 +54,10 @@ class FinancialSnapshot
         // Consider the current month incomplete if we're before the 28th
         $currentMonthComplete = now()->day >= 28;
 
+        // When incomplete, use last complete month for headline metrics
+        $referenceMonth = $currentMonthComplete ? $currentMonth : $prevMonth;
+        $comparisonMonth = $currentMonthComplete ? $prevMonth : now()->subMonths(2)->format('Y-m');
+
         // Normalize to ratios (income = 100)
         $monthlyRatios = $monthly->map(function ($m) use ($currentMonth, $currentMonthComplete) {
             $income = (float) $m->income;
@@ -69,12 +73,12 @@ class FinancialSnapshot
             ];
         })->values()->toArray();
 
-        // Category shares as % of total expenses (current month)
+        // Category shares as % of total expenses (reference month)
         $categoryExpenses = Transaction::select('categories.name', DB::raw('SUM(ABS(transactions.amount)) as total'))
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
             ->where('transactions.amount', '<', 0)
             ->where('categories.type', '!=', 'transfer')
-            ->whereRaw("strftime('%Y-%m', transactions.date) = ?", [$currentMonth])
+            ->whereRaw("strftime('%Y-%m', transactions.date) = ?", [$referenceMonth])
             ->groupBy('categories.name')
             ->orderByDesc('total')
             ->get();
@@ -85,25 +89,25 @@ class FinancialSnapshot
             'share' => $totalExpenses > 0 ? round(($c->total / $totalExpenses) * 100, 1) : 0,
         ])->toArray();
 
-        // Savings rate
-        $currentData = $monthly->firstWhere('month', $currentMonth);
-        $currentIncome = (float) ($currentData?->income ?? 0);
-        $currentExpenses = (float) ($currentData?->expenses ?? 0);
-        $savingsRate = $currentIncome > 0 ? round((($currentIncome - $currentExpenses) / $currentIncome) * 100, 1) : 0;
+        // Savings rate (from reference month, not distorted current month)
+        $refData = $monthly->firstWhere('month', $referenceMonth);
+        $referenceIncome = (float) ($refData?->income ?? 0);
+        $referenceExpenses = (float) ($refData?->expenses ?? 0);
+        $savingsRate = $referenceIncome > 0 ? round((($referenceIncome - $referenceExpenses) / $referenceIncome) * 100, 1) : 0;
 
-        // Previous month for trend
-        $prevData = $monthly->firstWhere('month', $prevMonth);
-        $prevIncome = (float) ($prevData?->income ?? 0);
-        $prevExpenses = (float) ($prevData?->expenses ?? 0);
-        $prevSavingsRate = $prevIncome > 0 ? round((($prevIncome - $prevExpenses) / $prevIncome) * 100, 1) : 0;
-        $savingsRateTrend = round($savingsRate - $prevSavingsRate, 1);
+        // Trend: compare reference month vs comparison month
+        $compData = $monthly->firstWhere('month', $comparisonMonth);
+        $compIncome = (float) ($compData?->income ?? 0);
+        $compExpenses = (float) ($compData?->expenses ?? 0);
+        $compSavingsRate = $compIncome > 0 ? round((($compIncome - $compExpenses) / $compIncome) * 100, 1) : 0;
+        $savingsRateTrend = round($savingsRate - $compSavingsRate, 1);
 
-        // Growing/shrinking categories (compare current vs previous month)
+        // Growing/shrinking categories (compare reference vs comparison month)
         $prevCategoryExpenses = Transaction::select('categories.name', DB::raw('SUM(ABS(transactions.amount)) as total'))
             ->join('categories', 'transactions.category_id', '=', 'categories.id')
             ->where('transactions.amount', '<', 0)
             ->where('categories.type', '!=', 'transfer')
-            ->whereRaw("strftime('%Y-%m', transactions.date) = ?", [$prevMonth])
+            ->whereRaw("strftime('%Y-%m', transactions.date) = ?", [$comparisonMonth])
             ->groupBy('categories.name')
             ->get()
             ->keyBy('name');
@@ -127,17 +131,18 @@ class FinancialSnapshot
         usort($growing, fn ($a, $b) => $b['change'] <=> $a['change']);
         usort($shrinking, fn ($a, $b) => $a['change'] <=> $b['change']);
 
-        // Loan summary — per-loan details + total monthly burden
-        $loanSummary = self::captureLoanSummary($currentIncome);
+        // Loan summary — use reference month income for burden %
+        $loanSummary = self::captureLoanSummary($referenceIncome);
 
-        // Budget utilization — categories with budgets
-        $budgetUtilization = self::captureBudgetUtilization($currentMonth, $currentIncome);
+        // Budget utilization — stays current month (tracks real-time budget progress)
+        $budgetUtilization = self::captureBudgetUtilization($currentMonth, $referenceIncome);
 
-        // Recurring coverage — % of expenses covered by Daueraufträge
-        $recurringCoverage = self::captureRecurringCoverage($currentExpenses);
+        // Recurring coverage — use reference month expenses
+        $recurringCoverage = self::captureRecurringCoverage($referenceExpenses);
 
-        // Income stability — coefficient of variation over available months
-        $incomeStability = self::captureIncomeStability($monthly);
+        // Income stability — exclude incomplete month
+        $stabilityMonthly = $currentMonthComplete ? $monthly : $monthly->where('month', '!=', $currentMonth);
+        $incomeStability = self::captureIncomeStability($stabilityMonthly);
 
         // Category trends — 12-month per-category trends (top categories)
         $categoryTrends = self::captureCategoryTrends($twelveMonthsAgo, $monthly);
@@ -437,13 +442,15 @@ class FinancialSnapshot
             $lines[] = "  {$m['month']}: Ausgaben={$m['expenses']}% vom Einkommen, Sparquote={$m['savings']}%{$incomplete}";
         }
 
-        $lines[] = "\nAusgaben nach Kategorie (aktueller Monat):";
+        $refMonth = $this->currentMonthComplete ? now()->format('Y-m') : now()->subMonth()->format('Y-m');
+        $lines[] = "\nAusgaben nach Kategorie ({$refMonth}):";
         foreach ($this->categoryShares as $c) {
             $lines[] = "  {$c['category']}: {$c['share']}%";
         }
 
-        $lines[] = "\nAktuelle Sparquote: {$this->savingsRate}%";
-        $lines[] = 'Trend zum Vormonat: '.($this->savingsRateTrend >= 0 ? '+' : '')."{$this->savingsRateTrend}%";
+        $lines[] = "\nSparquote ({$refMonth}): {$this->savingsRate}%";
+        $compMonth = $this->currentMonthComplete ? now()->subMonth()->format('Y-m') : now()->subMonths(2)->format('Y-m');
+        $lines[] = "Trend gegenüber {$compMonth}: ".($this->savingsRateTrend >= 0 ? '+' : '')."{$this->savingsRateTrend}%";
 
         if (! empty($this->topGrowingCategories)) {
             $lines[] = "\nStark gestiegene Kategorien:";

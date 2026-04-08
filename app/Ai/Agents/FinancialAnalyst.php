@@ -247,10 +247,60 @@ INSTRUCTIONS;
                     $normalized[] = ['loan' => $l, 'comment' => ''];
                 }
             }
-            $data['loanInsights'] = $normalized;
+            $data['loanInsights'] = self::mergeAlternatingLoanInsights($normalized);
         }
 
         return $data;
+    }
+
+    /**
+     * Merge alternating key/value loan entries from local models.
+     * Input:  [{loan:"Kredit",comment:"Kredit A"},{loan:"Fortschritt",comment:"19.5%"},...]
+     * Output: [{loan:"Kredit A",comment:"Fortschritt: 19.5%"},...]
+     */
+    private static function mergeAlternatingLoanInsights(array $insights): array
+    {
+        // Detect alternating pattern: entries where comment matches "Kredit [A-Z]"
+        $hasNameEntries = false;
+        foreach ($insights as $entry) {
+            if (preg_match('/^Kredit [A-Z]$/', $entry['comment'] ?? '')) {
+                $hasNameEntries = true;
+                break;
+            }
+        }
+
+        if (! $hasNameEntries) {
+            return $insights;
+        }
+
+        $merged = [];
+        $currentLoan = null;
+        $currentDetails = [];
+
+        foreach ($insights as $entry) {
+            $comment = $entry['comment'] ?? '';
+            if (preg_match('/^Kredit [A-Z]$/', $comment)) {
+                // Flush previous loan
+                if ($currentLoan !== null) {
+                    $merged[] = ['loan' => $currentLoan, 'comment' => implode(', ', $currentDetails) ?: ''];
+                }
+                $currentLoan = $comment;
+                $currentDetails = [];
+            } elseif ($currentLoan !== null) {
+                $key = $entry['loan'] ?? '';
+                $val = $comment;
+                $currentDetails[] = $key ? "{$key}: {$val}" : $val;
+            } else {
+                $merged[] = $entry;
+            }
+        }
+
+        // Flush last loan
+        if ($currentLoan !== null) {
+            $merged[] = ['loan' => $currentLoan, 'comment' => implode(', ', $currentDetails) ?: ''];
+        }
+
+        return $merged;
     }
 
     /**
