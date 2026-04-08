@@ -66,7 +66,7 @@ INSTRUCTIONS;
                 'priority' => $schema->string()->enum(['high', 'medium', 'low'])->required(),
                 'title' => $schema->string()->required(),
                 'detail' => $schema->string()->required(),
-                'impact' => $schema->string(),
+                'impact' => $schema->string()->required(),
             ]))->required(),
         ];
     }
