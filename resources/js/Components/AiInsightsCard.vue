@@ -6,6 +6,13 @@ import { useCsrfFetch } from '@/Composables/useCsrfFetch.js';
 
 const { csrfFetch } = useCsrfFetch();
 
+function renderMarkdown(text) {
+    if (!text) return '';
+    return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+}
+
 const loading = ref(true);
 const error = ref(null);
 const enabled = ref(false);
@@ -87,14 +94,14 @@ const topRecommendation = computed(() => {
                     <span class="text-2xl font-bold" :style="{ color: healthColor }">{{ structured.healthScore }}</span>
                     <span class="text-xs text-gray-400">/100</span>
                 </div>
-                <p class="text-sm text-gray-600 dark:text-gray-300 flex-1">{{ structured.summary }}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-300 flex-1" v-html="renderMarkdown(structured.summary)"></p>
             </div>
 
             <div v-if="topRecommendation" class="bg-purple-50 dark:bg-purple-900/20 rounded-lg px-3 py-2">
                 <p class="text-xs font-medium text-purple-700 dark:text-purple-400">
-                    <i class="pi pi-lightbulb mr-1"></i>{{ topRecommendation.title }}
+                    <i class="pi pi-lightbulb mr-1"></i><span v-html="renderMarkdown(topRecommendation.title)"></span>
                 </p>
-                <p class="text-xs text-purple-600 dark:text-purple-300 mt-0.5">{{ topRecommendation.detail }}</p>
+                <p class="text-xs text-purple-600 dark:text-purple-300 mt-0.5" v-html="renderMarkdown(topRecommendation.detail)"></p>
             </div>
         </template>
 

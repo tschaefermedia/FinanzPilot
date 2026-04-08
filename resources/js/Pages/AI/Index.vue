@@ -22,7 +22,7 @@ const props = defineProps({
     history: { type: Array, default: () => [] },
 });
 
-const loading = ref(true);
+const loading = ref(false);
 const error = ref(null);
 const data = ref(null);
 const structured = ref(null);
@@ -60,6 +60,7 @@ async function fetchInsights(refresh = false) {
     }
 }
 
+// Fetch cached insights on mount (no AI call — cache-only GET)
 onMounted(() => fetchInsights());
 
 // Health score color
@@ -280,11 +281,12 @@ function toggleHistoryItem(id) {
     expandedHistoryId.value = expandedHistoryId.value === id ? null : id;
 }
 
-// Raw text fallback formatting
-function formatRawInsights(text) {
+// Render markdown bold + newlines as HTML
+function renderMarkdown(text) {
+    if (!text) return '';
     return text
-        .replace(/\*\*(.*?)\*\*/g, '$1')
-        .replace(/^- /gm, '• ');
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
 }
 </script>
 
@@ -392,6 +394,13 @@ function formatRawInsights(text) {
             </EmptyState>
         </div>
 
+        <!-- No analysis yet — show start button -->
+        <div v-else-if="!structured && !loading && props.aiEnabled && !error" class="max-w-lg mx-auto py-12">
+            <EmptyState message="Noch keine Analyse vorhanden." icon="pi-sparkles">
+                <Button label="Analyse starten" icon="pi pi-sparkles" @click="fetchInsights(true)" :loading="loading" />
+            </EmptyState>
+        </div>
+
         <!-- Structured analysis -->
         <template v-else-if="structured">
             <!-- Health Score + Summary -->
@@ -408,7 +417,7 @@ function formatRawInsights(text) {
 
                 <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
                     <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">Zusammenfassung</h3>
-                    <p class="text-gray-700 dark:text-gray-200 leading-relaxed mb-4">{{ structured.summary }}</p>
+                    <p class="text-gray-700 dark:text-gray-200 leading-relaxed mb-4" v-html="renderMarkdown(structured.summary)"></p>
 
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         <div>
@@ -459,15 +468,15 @@ function formatRawInsights(text) {
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div
-                        v-for="(h, i) in structured.highlights"
+                        v-for="(h, i) in structured.highlights.filter(h => h.detail?.replace(/\*+/g, '').trim())"
                         :key="i"
                         :class="['rounded-lg border p-4', highlightBg(h.type)]"
                     >
                         <div class="flex items-start gap-3">
                             <i :class="[highlightIcon(h.type), highlightTextColor(h.type), 'text-lg mt-0.5']"></i>
                             <div>
-                                <p v-if="!isTitleRedundant(h.title, h.detail)" :class="['font-medium text-sm', highlightTextColor(h.type)]">{{ h.title }}</p>
-                                <p class="text-sm text-gray-600 dark:text-gray-300" :class="{ 'mt-1': !isTitleRedundant(h.title, h.detail) }">{{ h.detail }}</p>
+                                <p v-if="!isTitleRedundant(h.title, h.detail)" :class="['font-medium text-sm', highlightTextColor(h.type)]" v-html="renderMarkdown(h.title)"></p>
+                                <p class="text-sm text-gray-600 dark:text-gray-300" :class="{ 'mt-1': !isTitleRedundant(h.title, h.detail) }" v-html="renderMarkdown(h.detail)"></p>
                             </div>
                         </div>
                     </div>
@@ -486,7 +495,7 @@ function formatRawInsights(text) {
                             <i :class="[categoryTrendIcon(c.trend), 'mt-0.5']"></i>
                             <div>
                                 <p class="text-sm font-medium text-gray-900 dark:text-white">{{ c.category }}</p>
-                                <p v-if="c.comment" class="text-xs text-gray-500 dark:text-gray-400">{{ c.comment }}</p>
+                                <p v-if="c.comment" class="text-xs text-gray-500 dark:text-gray-400" v-html="renderMarkdown(c.comment)"></p>
                             </div>
                         </div>
                     </div>
@@ -545,7 +554,7 @@ function formatRawInsights(text) {
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
                     <div v-for="(l, i) in structured.loanInsights" :key="i" class="px-4 py-3">
                         <p class="text-sm font-medium text-gray-900 dark:text-white">{{ l.loan }}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ l.comment }}</p>
+                        <p v-if="l.comment?.trim()" class="text-xs text-gray-500 dark:text-gray-400 mt-1" v-html="renderMarkdown(l.comment)"></p>
                     </div>
                 </div>
             </div>
@@ -558,17 +567,17 @@ function formatRawInsights(text) {
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div
-                        v-for="(r, i) in structured.recommendations"
+                        v-for="(r, i) in structured.recommendations.filter(r => r.detail?.replace(/\*+/g, '').trim())"
                         :key="i"
                         class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-4"
                     >
                         <div class="flex items-center gap-2 mb-2">
                             <Tag :value="r.priority === 'high' ? 'Hoch' : r.priority === 'medium' ? 'Mittel' : 'Niedrig'" :severity="priorityColor(r.priority)" />
-                            <span v-if="!isTitleRedundant(r.title, r.detail)" class="text-sm font-medium text-gray-900 dark:text-white">{{ r.title }}</span>
+                            <span v-if="!isTitleRedundant(r.title, r.detail)" class="text-sm font-medium text-gray-900 dark:text-white" v-html="renderMarkdown(r.title)"></span>
                         </div>
-                        <p class="text-sm text-gray-600 dark:text-gray-300">{{ r.detail }}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-300" v-html="renderMarkdown(r.detail)"></p>
                         <p v-if="r.impact" class="text-xs text-purple-600 dark:text-purple-400 mt-2">
-                            <i class="pi pi-arrow-right text-xs mr-1"></i>{{ r.impact }}
+                            <i class="pi pi-arrow-right text-xs mr-1"></i><span v-html="renderMarkdown(r.impact)"></span>
                         </p>
                     </div>
                 </div>
@@ -586,12 +595,8 @@ function formatRawInsights(text) {
         <!-- Raw text fallback -->
         <template v-else-if="data?.raw">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
-                <pre class="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-200 font-sans leading-relaxed">{{ formatRawInsights(data.raw) }}</pre>
+                <div class="text-sm text-gray-700 dark:text-gray-200 leading-relaxed" v-html="renderMarkdown(data.raw)"></div>
             </div>
-            <ChatInterface />
-        </template>
-
-        <template v-else-if="!loading && props.aiEnabled && !error">
             <ChatInterface />
         </template>
 
@@ -623,7 +628,7 @@ function formatRawInsights(text) {
                             {{ entry.healthScore }}
                         </span>
                         <div class="flex-1 min-w-0">
-                            <p class="text-sm text-gray-700 dark:text-gray-200 truncate">{{ entry.summary }}</p>
+                            <p class="text-sm text-gray-700 dark:text-gray-200 truncate" v-html="renderMarkdown(entry.summary)"></p>
                             <p class="text-xs text-gray-400">{{ formatHistoryDate(entry.createdAt) }} · {{ entry.provider }}</p>
                         </div>
                         <i :class="['pi text-gray-400 text-xs', expandedHistoryId === entry.id ? 'pi-chevron-up' : 'pi-chevron-down']"></i>
@@ -638,8 +643,8 @@ function formatRawInsights(text) {
                             >
                                 <i :class="[highlightIcon(h.type), highlightTextColor(h.type), 'text-sm mt-0.5']"></i>
                                 <div>
-                                    <span :class="['text-xs font-medium', highlightTextColor(h.type)]">{{ h.title }}</span>
-                                    <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">{{ h.detail }}</span>
+                                    <span :class="['text-xs font-medium', highlightTextColor(h.type)]" v-html="renderMarkdown(h.title)"></span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400 ml-1" v-html="renderMarkdown(h.detail)"></span>
                                 </div>
                             </div>
                         </div>
