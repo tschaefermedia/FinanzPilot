@@ -66,6 +66,7 @@ class TransactionController extends Controller
         return Inertia::render('Transactions/Index', [
             'transactions' => $transactions,
             'categories' => Category::with('parent')->orderBy('name')->get(),
+            'categoryTree' => Category::tree(),
             'filters' => $request->only(['search', 'category_id', 'date_from', 'date_to', 'type', 'account_id', 'sort_field', 'sort_order']),
             'accounts' => $accounts,
         ]);
