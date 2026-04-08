@@ -23,6 +23,9 @@ class AiAnalysisController extends Controller
             'anomalies' => $snapshot->anomalies,
             'budgetUtilization' => $snapshot->budgetUtilization,
             'currentMonthComplete' => $snapshot->currentMonthComplete,
+            'topGrowingCategories' => $snapshot->topGrowingCategories,
+            'topShrinkingCategories' => $snapshot->topShrinkingCategories,
+            'monthlyRatios' => $snapshot->monthlyRatios,
             'history' => FinancialAnalyst::history(),
         ]);
     }

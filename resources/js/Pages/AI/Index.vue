@@ -19,6 +19,9 @@ const props = defineProps({
     anomalies: { type: Array, default: () => [] },
     budgetUtilization: { type: Array, default: () => [] },
     currentMonthComplete: { type: Boolean, default: true },
+    topGrowingCategories: { type: Array, default: () => [] },
+    topShrinkingCategories: { type: Array, default: () => [] },
+    monthlyRatios: { type: Array, default: () => [] },
     history: { type: Array, default: () => [] },
 });
 
@@ -259,9 +262,9 @@ const hasCategoryComments = computed(() => {
     return structured.value?.categoryInsights?.some(c => c.comment?.trim());
 });
 
-// Monthly comparison: last two complete months
+// Monthly comparison: last two complete months (from Inertia props, always available)
 const monthlyComparison = computed(() => {
-    const ratios = snapshot.value?.monthlyRatios?.filter(m => !m.incomplete) ?? [];
+    const ratios = props.monthlyRatios.filter(m => !m.incomplete);
     if (ratios.length < 2) return null;
     const current = ratios[ratios.length - 1];
     const previous = ratios[ratios.length - 2];
@@ -274,8 +277,8 @@ const monthlyComparison = computed(() => {
         expenses: current.expenses,
         prevExpenses: previous.expenses,
         expensesChange: +(current.expenses - previous.expenses).toFixed(1),
-        growing: snapshot.value?.topGrowingCategories ?? [],
-        shrinking: snapshot.value?.topShrinkingCategories ?? [],
+        growing: props.topGrowingCategories,
+        shrinking: props.topShrinkingCategories,
     };
 });
 
