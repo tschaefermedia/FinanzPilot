@@ -132,6 +132,9 @@ const chartSeries = computed(() => [
             <StatCard label="Restbetrag" :value="formatCurrency(summary.remainingBalance ?? 0)" />
             <StatCard v-if="loan.type === 'bank'" label="Gesamtzinsen" :value="formatCurrency(summary.totalInterest ?? 0)" />
             <StatCard label="Fortschritt" :value="`${formatNumber(summary.progressPercent ?? 0, 1)}%`" />
+            <StatCard v-if="summary.monthlyPayment" label="Rate/Monat" :value="formatCurrency(summary.monthlyPayment)" />
+            <StatCard v-if="summary.remainingMonths" label="Verbleibende Monate" :value="String(summary.remainingMonths)" />
+            <StatCard v-if="summary.expectedPayoffDate" label="Voraussichtlich abbezahlt" :value="formatDate(summary.expectedPayoffDate)" />
         </div>
 
         <!-- Payoff chart -->

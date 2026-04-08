@@ -20,6 +20,7 @@ class FinancialSnapshot
         public readonly array $topGrowingCategories,     // categories with increasing spend
         public readonly array $topShrinkingCategories,
         public readonly array $loanSummary,              // aggregated loan stats
+        public readonly array $loanNameMap,              // "Kredit A" => real loan name
         public readonly array $budgetUtilization,        // category budget vs actual
         public readonly float $recurringCoveragePercent, // % of expenses covered by recurring
         public readonly float $incomeStability,          // coefficient of variation (lower = more stable)
@@ -132,7 +133,7 @@ class FinancialSnapshot
         usort($shrinking, fn ($a, $b) => $a['change'] <=> $b['change']);
 
         // Loan summary — use reference month income for burden %
-        $loanSummary = self::captureLoanSummary($referenceIncome);
+        [$loanSummary, $loanNameMap] = self::captureLoanSummary($referenceIncome);
 
         // Budget utilization — stays current month (tracks real-time budget progress)
         $budgetUtilization = self::captureBudgetUtilization($currentMonth, $referenceIncome);
@@ -164,6 +165,7 @@ class FinancialSnapshot
             topGrowingCategories: array_slice($growing, 0, 3),
             topShrinkingCategories: array_slice($shrinking, 0, 3),
             loanSummary: $loanSummary,
+            loanNameMap: $loanNameMap,
             budgetUtilization: $budgetUtilization,
             recurringCoveragePercent: $recurringCoverage,
             incomeStability: $incomeStability,
@@ -174,15 +176,19 @@ class FinancialSnapshot
         );
     }
 
+    /**
+     * @return array{0: array, 1: array} [loanSummary, loanNameMap]
+     */
     private static function captureLoanSummary(float $currentIncome): array
     {
         $loans = Loan::with('payments')->get();
         if ($loans->isEmpty()) {
-            return [];
+            return [[], []];
         }
 
         $amortization = new AmortizationService;
         $loanDetails = [];
+        $nameMap = [];
         $totalMonthlyBurden = 0;
         $loanIndex = 0;
 
@@ -191,8 +197,11 @@ class FinancialSnapshot
             $monthlyPayment = $summary['monthlyPayment'] ?? 0;
             $totalMonthlyBurden += $monthlyPayment;
 
+            $anonymizedName = 'Kredit '.chr(65 + $loanIndex);
+            $nameMap[$anonymizedName] = $loan->name;
+
             $loanDetails[] = [
-                'name' => 'Kredit '.chr(65 + $loanIndex),
+                'name' => $anonymizedName,
                 'type' => $loan->type === 'bank' ? 'Bankdarlehen' : 'Informell',
                 'direction' => $loan->direction === 'owed_by_me' ? 'Schulden' : 'Forderung',
                 'progressPercent' => $summary['progressPercent'],
@@ -202,10 +211,13 @@ class FinancialSnapshot
         }
 
         return [
-            'count' => count($loanDetails),
-            'loans' => $loanDetails,
-            'totalMonthlyBurden' => $totalMonthlyBurden,
-            'monthlyBurdenPercent' => $currentIncome > 0 ? round(($totalMonthlyBurden / $currentIncome) * 100, 1) : 0,
+            [
+                'count' => count($loanDetails),
+                'loans' => $loanDetails,
+                'totalMonthlyBurden' => $totalMonthlyBurden,
+                'monthlyBurdenPercent' => $currentIncome > 0 ? round(($totalMonthlyBurden / $currentIncome) * 100, 1) : 0,
+            ],
+            $nameMap,
         ];
     }
 
@@ -431,15 +443,12 @@ class FinancialSnapshot
     {
         $lines = ["Finanzdaten (anonymisiert, alle Werte in Prozent vom Einkommen):\n"];
 
-        if (! $this->currentMonthComplete) {
-            $currentMonth = now()->format('Y-m');
-            $lines[] = "⚠ WICHTIG: Der aktuelle Monat ({$currentMonth}) ist noch unvollständig — das Gehalt kommt typischerweise am Monatsende. Die Werte dieses Monats sind NICHT repräsentativ und sollten bei der Bewertung des healthScore und der Trends NICHT berücksichtigt werden. Nutze die abgeschlossenen Monate.\n";
-        }
+        // Filter out incomplete months for AI analysis
+        $completeMonths = array_filter($this->monthlyRatios, fn ($m) => empty($m['incomplete']));
 
         $lines[] = 'Monatliche Übersicht (letzte 12 Monate):';
-        foreach ($this->monthlyRatios as $m) {
-            $incomplete = ! empty($m['incomplete']) ? ' [UNVOLLSTÄNDIG]' : '';
-            $lines[] = "  {$m['month']}: Ausgaben={$m['expenses']}% vom Einkommen, Sparquote={$m['savings']}%{$incomplete}";
+        foreach ($completeMonths as $m) {
+            $lines[] = "  {$m['month']}: Ausgaben={$m['expenses']}% vom Einkommen, Sparquote={$m['savings']}%";
         }
 
         $refMonth = $this->currentMonthComplete ? now()->format('Y-m') : now()->subMonth()->format('Y-m');
@@ -529,28 +538,27 @@ class FinancialSnapshot
 
     public function toHealthContext(): string
     {
+        $completeMonths = array_filter($this->monthlyRatios, fn ($m) => empty($m['incomplete']));
+
         $lines = ['Monatliche Übersicht:'];
-        foreach ($this->monthlyRatios as $m) {
-            $incomplete = ! empty($m['incomplete']) ? ' [UNVOLLSTÄNDIG]' : '';
-            $lines[] = "  {$m['month']}: Ausgaben={$m['expenses']}%, Sparquote={$m['savings']}%{$incomplete}";
+        foreach ($completeMonths as $m) {
+            $lines[] = "  {$m['month']}: Ausgaben={$m['expenses']}%, Sparquote={$m['savings']}%";
         }
         $refMonth = $this->currentMonthComplete ? now()->format('Y-m') : now()->subMonth()->format('Y-m');
         $lines[] = "\nSparquote ({$refMonth}): {$this->savingsRate}%";
         $stabilityLabel = $this->incomeStability < 10 ? 'sehr stabil' : ($this->incomeStability < 25 ? 'mäßig stabil' : 'schwankend');
         $lines[] = "Einkommensstabilität: {$stabilityLabel} (CV {$this->incomeStability}%)";
-        if (! $this->currentMonthComplete) {
-            $lines[] = "\n⚠ Aktueller Monat unvollständig — Gehalt kommt am Monatsende. Nicht für Bewertung nutzen.";
-        }
 
         return implode("\n", $lines);
     }
 
     public function toHighlightsContext(): string
     {
+        $completeMonths = array_filter($this->monthlyRatios, fn ($m) => empty($m['incomplete']));
+
         $lines = ['Monatliche Übersicht:'];
-        foreach ($this->monthlyRatios as $m) {
-            $incomplete = ! empty($m['incomplete']) ? ' [UNVOLLSTÄNDIG]' : '';
-            $lines[] = "  {$m['month']}: Ausgaben={$m['expenses']}%, Sparquote={$m['savings']}%{$incomplete}";
+        foreach ($completeMonths as $m) {
+            $lines[] = "  {$m['month']}: Ausgaben={$m['expenses']}%, Sparquote={$m['savings']}%";
         }
         if (! empty($this->budgetUtilization)) {
             $lines[] = "\nBudgets:";
@@ -568,9 +576,6 @@ class FinancialSnapshot
                     default => null,
                 };
             }
-        }
-        if (! $this->currentMonthComplete) {
-            $lines[] = "\n⚠ Aktueller Monat unvollständig — nicht für Bewertung nutzen.";
         }
 
         return implode("\n", $lines);

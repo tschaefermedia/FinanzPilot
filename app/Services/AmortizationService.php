@@ -70,24 +70,34 @@ class AmortizationService
         $schedule = $this->calculateSchedule($loan);
 
         if (empty($schedule)) {
-            // Informal loan — simple summary
+            // Informal loan or bank loan without full schedule — simple summary
             $totalPaid = $loan->payments->sum('amount');
             $principal = (float) $loan->principal;
             $initialBalance = (float) ($loan->initial_balance ?? $principal);
             $prePaid = $principal - $initialBalance;
+            $remainingBalance = round($initialBalance - $totalPaid, 2);
+            $monthlyRate = (float) ($loan->monthly_rate ?? 0);
 
-            return [
+            $summary = [
                 'totalPayments' => round($totalPaid, 2),
-                'remainingBalance' => round($initialBalance - $totalPaid, 2),
+                'remainingBalance' => $remainingBalance,
                 'totalInterest' => 0,
-                'monthlyPayment' => (float) ($loan->monthly_rate ?? 0),
+                'monthlyPayment' => $monthlyRate,
                 'progressPercent' => $principal > 0 ? round((($prePaid + $totalPaid) / $principal) * 100, 1) : 0,
             ];
+
+            if ($monthlyRate > 0 && $remainingBalance > 0) {
+                $remainingMonths = (int) ceil($remainingBalance / $monthlyRate);
+                $summary['remainingMonths'] = $remainingMonths;
+                $summary['expectedPayoffDate'] = now()->addMonths($remainingMonths)->format('Y-m-d');
+            }
+
+            return $summary;
         }
 
         $totalPayments = array_sum(array_column($schedule, 'payment'));
         $totalInterest = array_sum(array_column($schedule, 'interest'));
-        $monthlyPayment = $schedule[0]['payment'] ?? 0;
+        $monthlyPayment = $loan->monthly_rate ? (float) $loan->monthly_rate : ($schedule[0]['payment'] ?? 0);
 
         // Calculate actual remaining balance based on payments made
         $totalPaid = $loan->payments->sum('amount');

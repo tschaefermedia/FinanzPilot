@@ -162,6 +162,9 @@ function typeLabel(type) {
                         <span>{{ formatNumber(loan.summary.progressPercent, 1) }}%</span>
                     </div>
                     <ProgressBar :value="loan.summary.progressPercent" :showValue="false" style="height: 6px" />
+                    <p v-if="loan.summary.expectedPayoffDate" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Voraussichtlich abbezahlt: {{ formatDate(loan.summary.expectedPayoffDate) }}
+                    </p>
                 </div>
             </div>
         </div>
@@ -220,9 +223,10 @@ function typeLabel(type) {
                     </div>
                 </div>
 
-                <div v-if="form.type === 'informal'">
+                <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Rate/Monat</label>
                     <InputNumber v-model="form.monthly_rate" mode="currency" currency="EUR" locale="de-DE" class="w-full" />
+                    <small v-if="form.type === 'bank'" class="text-xs text-gray-500 dark:text-gray-400">Optional — überschreibt die berechnete Rate.</small>
                 </div>
 
                 <div>

@@ -49,6 +49,7 @@ class FinancialAnalyst
             'categoryInsights' => $categories,
             'recommendations' => $recommendations,
             'loanInsights' => $loans,
+            'loanNameMap' => $snapshot->loanNameMap,
         ]);
 
         // Store in history
@@ -93,6 +94,7 @@ class FinancialAnalyst
                 'healthTrend' => $insight->health_trend,
                 'summary' => $insight->structured_data['summary'] ?? null,
                 'highlights' => $insight->structured_data['highlights'] ?? [],
+                'loanNameMap' => $insight->structured_data['loanNameMap'] ?? [],
                 'provider' => $insight->provider,
                 'createdAt' => $insight->created_at->toIso8601String(),
             ])
