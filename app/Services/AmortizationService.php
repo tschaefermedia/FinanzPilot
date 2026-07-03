@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\Loan;
 use App\Models\LoanPayment;
 use App\Models\Transaction;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 
 class AmortizationService
 {
@@ -142,12 +142,18 @@ class AmortizationService
             return 0;
         }
 
-        $monthlyAmount = abs($schedule[0]['payment']);
+        // Match against the configured monthly rate when set (the actual debit),
+        // falling back to the computed annuity payment.
+        $monthlyAmount = $loan->monthly_rate > 0
+            ? abs((float) $loan->monthly_rate)
+            : abs($schedule[0]['payment']);
         $matched = 0;
 
-        // Find unmatched transactions near the payment amount
+        // Find unmatched transactions near the payment amount.
+        // CAST(... AS REAL) is required: SQLite binds PHP floats as text, and a
+        // numeric column compared to a text bound value never matches a BETWEEN.
         $query = Transaction::where('amount', '<', 0)
-            ->whereBetween(DB::raw('ABS(amount)'), [$monthlyAmount * 0.95, $monthlyAmount * 1.05])
+            ->whereRaw('ABS(amount) BETWEEN CAST(? AS REAL) AND CAST(? AS REAL)', [$monthlyAmount * 0.95, $monthlyAmount * 1.05])
             ->whereDoesntHave('loanPayment')
             ->where('date', '>=', $loan->start_date);
 
@@ -169,9 +175,8 @@ class AmortizationService
         $existingMonths = $loan->payments->map(fn ($p) => $p->date->format('Y-m'))->toArray();
 
         foreach ($transactions as $transaction) {
-            // Check if payment day is close
-            $txDay = $transaction->date->day;
-            if (abs($txDay - $loan->payment_day) <= 3) {
+            // Check if payment day is close (wrapping across month boundaries)
+            if ($this->isNearPaymentDay($transaction->date, (int) $loan->payment_day)) {
                 // Check if we don't already have a payment for this month
                 $monthKey = $transaction->date->format('Y-m');
 
@@ -190,5 +195,24 @@ class AmortizationService
         }
 
         return $matched;
+    }
+
+    /**
+     * Whether a transaction date falls within tolerance of the loan's payment day.
+     * Considers the payment day in the previous, current, and next month so a
+     * debit that shifts across a month boundary (e.g. weekend) still matches.
+     */
+    private function isNearPaymentDay(Carbon $date, int $paymentDay, int $tolerance = 3): bool
+    {
+        foreach ([-1, 0, 1] as $offset) {
+            $month = $date->copy()->startOfMonth()->addMonthsNoOverflow($offset);
+            $expected = $month->copy()->day(min($paymentDay, $month->daysInMonth));
+
+            if (abs($date->diffInDays($expected)) <= $tolerance) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
