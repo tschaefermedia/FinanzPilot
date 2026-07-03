@@ -41,10 +41,10 @@ class CategoryAnalysisControllerTest extends TestCase
         $response = $this->get('/categories/analysis');
 
         $response->assertInertia(fn ($page) => $page
-            ->has('expenseHierarchy', 1)
-            ->where('expenseHierarchy.0.name', 'Wohnen')
-            ->where('expenseHierarchy.0.expense', 900)
-            ->has('expenseHierarchy.0.children', 2)
+            ->has('hierarchy', 1)
+            ->where('hierarchy.0.name', 'Wohnen')
+            ->where('hierarchy.0.expense', 900)
+            ->has('hierarchy.0.children', 2)
         );
     }
 
@@ -69,7 +69,7 @@ class CategoryAnalysisControllerTest extends TestCase
 
         $response->assertInertia(fn ($page) => $page
             ->where('selectedMonth', '2026-01')
-            ->where('expenseHierarchy.0.expense', 50)
+            ->where('hierarchy.0.expense', 50)
         );
     }
 }
