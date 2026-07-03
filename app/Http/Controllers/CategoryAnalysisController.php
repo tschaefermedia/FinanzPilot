@@ -47,33 +47,44 @@ class CategoryAnalysisController extends Controller
             ->get()
             ->keyBy('category_id');
 
-        // Build hierarchical data
-        $categories = Category::with('children')
-            ->whereNull('parent_id')
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
+        // Load the full category tree so aggregation works at any nesting depth.
+        $allCategories = Category::orderBy('sort_order')->orderBy('name')->get();
+        $childrenByParent = $allCategories->groupBy('parent_id');
 
         $totalExpenses = $categoryTotals->sum('expense_total');
         $totalIncome = $categoryTotals->sum('income_total');
 
+        // Sum a category's own totals plus every descendant's, recursively.
+        $subtreeTotals = function (Category $category) use (&$subtreeTotals, $categoryTotals, $childrenByParent): array {
+            $expense = (float) ($categoryTotals[$category->id]?->expense_total ?? 0);
+            $income = (float) ($categoryTotals[$category->id]?->income_total ?? 0);
+            $count = (int) ($categoryTotals[$category->id]?->transaction_count ?? 0);
+
+            foreach ($childrenByParent[$category->id] ?? [] as $child) {
+                $childTotals = $subtreeTotals($child);
+                $expense += $childTotals['expense'];
+                $income += $childTotals['income'];
+                $count += $childTotals['count'];
+            }
+
+            return ['expense' => $expense, 'income' => $income, 'count' => $count];
+        };
+
         $hierarchy = [];
         $treemapData = [];
 
-        foreach ($categories as $parent) {
-            $parentExpense = (float) ($categoryTotals[$parent->id]?->expense_total ?? 0);
-            $parentIncome = (float) ($categoryTotals[$parent->id]?->income_total ?? 0);
-            $parentTxCount = (int) ($categoryTotals[$parent->id]?->transaction_count ?? 0);
+        foreach ($allCategories->whereNull('parent_id') as $parent) {
+            $parentTotals = $subtreeTotals($parent);
+            $parentExpense = $parentTotals['expense'];
+            $parentIncome = $parentTotals['income'];
+            $parentTxCount = $parentTotals['count'];
 
             $children = [];
-            foreach ($parent->children as $child) {
-                $childExpense = (float) ($categoryTotals[$child->id]?->expense_total ?? 0);
-                $childIncome = (float) ($categoryTotals[$child->id]?->income_total ?? 0);
-                $childTxCount = (int) ($categoryTotals[$child->id]?->transaction_count ?? 0);
-
-                $parentExpense += $childExpense;
-                $parentIncome += $childIncome;
-                $parentTxCount += $childTxCount;
+            foreach ($childrenByParent[$parent->id] ?? [] as $child) {
+                $childTotals = $subtreeTotals($child);
+                $childExpense = $childTotals['expense'];
+                $childIncome = $childTotals['income'];
+                $childTxCount = $childTotals['count'];
 
                 if ($childExpense > 0 || $childIncome > 0) {
                     $children[] = [
