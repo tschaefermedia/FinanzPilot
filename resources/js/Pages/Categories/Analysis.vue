@@ -5,7 +5,7 @@ import StatCard from '@/Components/StatCard.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import { useFormatters } from '@/Composables/useFormatters.js';
 import { useTheme } from '@/Composables/useTheme.js';
-import { computed, defineAsyncComponent, ref } from 'vue';
+import { computed, defineAsyncComponent, ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import DatePicker from 'primevue/datepicker';
@@ -25,17 +25,26 @@ const props = defineProps({
     selectedMonth: { type: String, default: '' },
     prevMonth: { type: String, default: null },
     nextMonth: { type: String, default: null },
-    expenseHierarchy: { type: Array, default: () => [] },
-    incomeHierarchy: { type: Array, default: () => [] },
+    hierarchy: { type: Array, default: () => [] },
     treemapData: { type: Array, default: () => [] },
     totalExpenses: { type: Number, default: 0 },
     totalIncome: { type: Number, default: 0 },
 });
 
-const selectedDate = ref(props.selectedMonth ? (() => {
-    const [y, m] = props.selectedMonth.split('-');
+function monthToDate(month) {
+    if (!month) {
+        return new Date();
+    }
+    const [y, m] = month.split('-');
     return new Date(y, m - 1);
-})() : new Date());
+}
+
+const selectedDate = ref(monthToDate(props.selectedMonth));
+
+// navigateMonth uses preserveState, so keep the picker in sync with the loaded month.
+watch(() => props.selectedMonth, (month) => {
+    selectedDate.value = monthToDate(month);
+});
 
 const viewOptions = [
     { label: 'Ausgaben', value: 'expense' },
@@ -45,15 +54,25 @@ const activeView = ref('expense');
 
 const expandedRows = ref({});
 
-const currentData = computed(() =>
-    activeView.value === 'expense' ? props.expenseHierarchy : props.incomeHierarchy
-);
+const amountKey = computed(() => activeView.value === 'expense' ? 'expense' : 'income');
+
+const currentData = computed(() => {
+    const key = amountKey.value;
+    return props.hierarchy
+        .filter(row => row[key] > 0)
+        .sort((a, b) => b[key] - a[key]);
+});
 
 const currentTotal = computed(() =>
     activeView.value === 'expense' ? props.totalExpenses : props.totalIncome
 );
 
-const hasData = computed(() => props.expenseHierarchy.length > 0 || props.incomeHierarchy.length > 0);
+const hasData = computed(() => props.hierarchy.length > 0);
+
+function visibleChildren(row) {
+    const key = amountKey.value;
+    return (row.children || []).filter(child => child[key] > 0);
+}
 
 function navigateMonth(month) {
     router.get('/categories/analysis', { month }, { preserveState: true });
@@ -183,8 +202,8 @@ function getPercent(row) {
                         </template>
                     </Column>
                     <template #expansion="{ data }">
-                        <div v-if="data.children && data.children.length > 0" class="pl-8">
-                            <DataTable :value="data.children" size="small">
+                        <div v-if="visibleChildren(data).length > 0" class="pl-8">
+                            <DataTable :value="visibleChildren(data)" size="small">
                                 <Column field="name" header="Unterkategorie">
                                     <template #body="{ data: child }">
                                         <span class="text-sm">{{ child.name }}</span>
@@ -223,3 +242,12 @@ function getPercent(row) {
         </template>
     </AppLayout>
 </template>
+
+<style scoped>
+/* PrimeVue's striped-row rule is a descendant selector, so the outer striped
+   table bleeds zebra striping onto the nested expansion tables' odd rows.
+   Reset it (extra .p-datatable-striped in the selector outranks the vendor rule). */
+:deep(.p-datatable-striped .p-datatable-row-expansion .p-datatable-tbody > tr.p-row-odd) {
+    background: transparent;
+}
+</style>
