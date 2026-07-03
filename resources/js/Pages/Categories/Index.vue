@@ -4,6 +4,7 @@ import PageHeader from '@/Components/PageHeader.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import { useForm, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { useFormatters } from '@/Composables/useFormatters.js';
 import { useConfirm } from 'primevue/useconfirm';
 import TreeTable from 'primevue/treetable';
 import Column from 'primevue/column';
@@ -15,6 +16,7 @@ import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 
 const confirm = useConfirm();
+const { formatCurrency } = useFormatters();
 
 const props = defineProps({
     categories: { type: Array, default: () => [] },
@@ -109,6 +111,12 @@ function deleteCategory(id) {
                 <Column field="transactionsCount" header="Buchungen" style="width: 120px">
                     <template #body="{ node }">
                         <span class="text-gray-500 dark:text-gray-400">{{ node.data.transactionsCount ?? 0 }}</span>
+                    </template>
+                </Column>
+                <Column field="monthlyAverage" header="Mtl. Durchschnitt" style="width: 150px">
+                    <template #body="{ node }">
+                        <span v-if="node.data.monthlyAverage" class="text-gray-500 dark:text-gray-400">{{ formatCurrency(node.data.monthlyAverage) }}</span>
+                        <span v-else class="text-gray-400">—</span>
                     </template>
                 </Column>
                 <Column header="Aktionen" style="width: 150px">

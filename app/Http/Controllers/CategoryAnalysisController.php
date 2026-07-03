@@ -47,6 +47,26 @@ class CategoryAnalysisController extends Controller
             ->get()
             ->keyBy('category_id');
 
+        // Cumulative totals up to (and including) the selected month, for the
+        // monthly average. Averaged over the months from the first transaction
+        // to the selected month.
+        $cumulativeTotals = Transaction::select(
+            'category_id',
+            DB::raw('SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as expense_total'),
+            DB::raw('SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income_total')
+        )
+            ->whereNotNull('category_id')
+            ->whereDoesntHave('category', fn ($q) => $q->where('type', 'transfer'))
+            ->where('date', '<=', $monthEnd)
+            ->groupBy('category_id')
+            ->get()
+            ->keyBy('category_id');
+
+        $monthsElapsed = 1;
+        if ($selectedMonth >= $firstMonth) {
+            $monthsElapsed = Carbon::createFromFormat('Y-m', $firstMonth)->startOfMonth()->diffInMonths($selectedDate) + 1;
+        }
+
         // Load the full category tree so aggregation works at any nesting depth.
         $allCategories = Category::orderBy('sort_order')->orderBy('name')->get();
         $childrenByParent = $allCategories->groupBy('parent_id');
@@ -56,10 +76,13 @@ class CategoryAnalysisController extends Controller
 
         // Build a full recursive node (own totals + every descendant's), pruning
         // subtrees with no activity. Works at any nesting depth.
-        $buildNode = function (Category $category) use (&$buildNode, $categoryTotals, $childrenByParent, $totalExpenses, $totalIncome): ?array {
+        $buildNode = function (Category $category) use (&$buildNode, $categoryTotals, $cumulativeTotals, $monthsElapsed, $childrenByParent, $totalExpenses, $totalIncome): ?array {
             $expense = (float) ($categoryTotals[$category->id]?->expense_total ?? 0);
             $income = (float) ($categoryTotals[$category->id]?->income_total ?? 0);
             $count = (int) ($categoryTotals[$category->id]?->transaction_count ?? 0);
+            // Monthly averages are additive across the subtree (constant divisor).
+            $avgMonthlyExpense = (float) ($cumulativeTotals[$category->id]?->expense_total ?? 0) / $monthsElapsed;
+            $avgMonthlyIncome = (float) ($cumulativeTotals[$category->id]?->income_total ?? 0) / $monthsElapsed;
 
             $children = [];
             foreach ($childrenByParent[$category->id] ?? [] as $child) {
@@ -68,6 +91,8 @@ class CategoryAnalysisController extends Controller
                     $expense += $childNode['expense'];
                     $income += $childNode['income'];
                     $count += $childNode['transactionCount'];
+                    $avgMonthlyExpense += $childNode['avgMonthlyExpense'];
+                    $avgMonthlyIncome += $childNode['avgMonthlyIncome'];
                     $children[] = $childNode;
                 }
             }
@@ -85,6 +110,8 @@ class CategoryAnalysisController extends Controller
                 'transactionCount' => $count,
                 'expensePercent' => $totalExpenses > 0 ? round(($expense / $totalExpenses) * 100, 1) : 0,
                 'incomePercent' => $totalIncome > 0 ? round(($income / $totalIncome) * 100, 1) : 0,
+                'avgMonthlyExpense' => round($avgMonthlyExpense, 2),
+                'avgMonthlyIncome' => round($avgMonthlyIncome, 2),
                 'budget' => $category->budget_monthly,
                 'children' => $children,
             ];
