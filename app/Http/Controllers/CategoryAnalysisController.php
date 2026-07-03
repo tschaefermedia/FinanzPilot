@@ -47,34 +47,44 @@ class CategoryAnalysisController extends Controller
             ->get()
             ->keyBy('category_id');
 
-        // Build hierarchical data
-        $categories = Category::with('children')
-            ->whereNull('parent_id')
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
+        // Load the full category tree so aggregation works at any nesting depth.
+        $allCategories = Category::orderBy('sort_order')->orderBy('name')->get();
+        $childrenByParent = $allCategories->groupBy('parent_id');
 
         $totalExpenses = $categoryTotals->sum('expense_total');
         $totalIncome = $categoryTotals->sum('income_total');
 
-        $expenseHierarchy = [];
-        $incomeHierarchy = [];
+        // Sum a category's own totals plus every descendant's, recursively.
+        $subtreeTotals = function (Category $category) use (&$subtreeTotals, $categoryTotals, $childrenByParent): array {
+            $expense = (float) ($categoryTotals[$category->id]?->expense_total ?? 0);
+            $income = (float) ($categoryTotals[$category->id]?->income_total ?? 0);
+            $count = (int) ($categoryTotals[$category->id]?->transaction_count ?? 0);
+
+            foreach ($childrenByParent[$category->id] ?? [] as $child) {
+                $childTotals = $subtreeTotals($child);
+                $expense += $childTotals['expense'];
+                $income += $childTotals['income'];
+                $count += $childTotals['count'];
+            }
+
+            return ['expense' => $expense, 'income' => $income, 'count' => $count];
+        };
+
+        $hierarchy = [];
         $treemapData = [];
 
-        foreach ($categories as $parent) {
-            $parentExpense = (float) ($categoryTotals[$parent->id]?->expense_total ?? 0);
-            $parentIncome = (float) ($categoryTotals[$parent->id]?->income_total ?? 0);
-            $parentTxCount = (int) ($categoryTotals[$parent->id]?->transaction_count ?? 0);
+        foreach ($allCategories->whereNull('parent_id') as $parent) {
+            $parentTotals = $subtreeTotals($parent);
+            $parentExpense = $parentTotals['expense'];
+            $parentIncome = $parentTotals['income'];
+            $parentTxCount = $parentTotals['count'];
 
             $children = [];
-            foreach ($parent->children as $child) {
-                $childExpense = (float) ($categoryTotals[$child->id]?->expense_total ?? 0);
-                $childIncome = (float) ($categoryTotals[$child->id]?->income_total ?? 0);
-                $childTxCount = (int) ($categoryTotals[$child->id]?->transaction_count ?? 0);
-
-                $parentExpense += $childExpense;
-                $parentIncome += $childIncome;
-                $parentTxCount += $childTxCount;
+            foreach ($childrenByParent[$parent->id] ?? [] as $child) {
+                $childTotals = $subtreeTotals($child);
+                $childExpense = $childTotals['expense'];
+                $childIncome = $childTotals['income'];
+                $childTxCount = $childTotals['count'];
 
                 if ($childExpense > 0 || $childIncome > 0) {
                     $children[] = [
@@ -92,7 +102,7 @@ class CategoryAnalysisController extends Controller
             }
 
             if ($parentExpense > 0 || $parentIncome > 0) {
-                $entry = [
+                $hierarchy[] = [
                     'id' => $parent->id,
                     'name' => $parent->name,
                     'type' => $parent->type,
@@ -105,12 +115,6 @@ class CategoryAnalysisController extends Controller
                     'children' => $children,
                 ];
 
-                if ($parent->type === 'income' || $parentIncome > $parentExpense) {
-                    $incomeHierarchy[] = $entry;
-                } else {
-                    $expenseHierarchy[] = $entry;
-                }
-
                 if ($parentExpense > 0) {
                     $treemapData[] = [
                         'x' => $parent->name,
@@ -120,16 +124,13 @@ class CategoryAnalysisController extends Controller
             }
         }
 
-        // Sort by total descending
-        usort($expenseHierarchy, fn ($a, $b) => $b['expense'] <=> $a['expense']);
-        usort($incomeHierarchy, fn ($a, $b) => $b['income'] <=> $a['income']);
+        usort($treemapData, fn ($a, $b) => $b['y'] <=> $a['y']);
 
         return Inertia::render('Categories/Analysis', [
             'selectedMonth' => $selectedMonth,
             'prevMonth' => $prevMonth,
             'nextMonth' => $nextMonth,
-            'expenseHierarchy' => $expenseHierarchy,
-            'incomeHierarchy' => $incomeHierarchy,
+            'hierarchy' => $hierarchy,
             'treemapData' => $treemapData,
             'totalExpenses' => round($totalExpenses, 2),
             'totalIncome' => round($totalIncome, 2),
