@@ -39,6 +39,7 @@ const navItems = [
     { label: 'Konten', icon: 'pi pi-wallet', href: '/accounts', active: true },
     { label: 'Buchungen', icon: 'pi pi-list', href: '/transactions', active: true },
     { label: 'Kategorien', icon: 'pi pi-tags', href: '/categories', active: true },
+    { label: 'Kategorien-Analyse', icon: 'pi pi-chart-pie', href: '/categories/analysis', active: true },
     { label: 'Import', icon: 'pi pi-upload', href: '/imports', active: true },
     { label: 'Darlehen', icon: 'pi pi-building-columns', href: '/loans', active: true },
     { label: 'Daueraufträge', icon: 'pi pi-replay', href: '/recurring', active: true },
