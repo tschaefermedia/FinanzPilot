@@ -57,8 +57,7 @@ class CategoryAnalysisController extends Controller
         $totalExpenses = $categoryTotals->sum('expense_total');
         $totalIncome = $categoryTotals->sum('income_total');
 
-        $expenseHierarchy = [];
-        $incomeHierarchy = [];
+        $hierarchy = [];
         $treemapData = [];
 
         foreach ($categories as $parent) {
@@ -92,7 +91,7 @@ class CategoryAnalysisController extends Controller
             }
 
             if ($parentExpense > 0 || $parentIncome > 0) {
-                $entry = [
+                $hierarchy[] = [
                     'id' => $parent->id,
                     'name' => $parent->name,
                     'type' => $parent->type,
@@ -105,12 +104,6 @@ class CategoryAnalysisController extends Controller
                     'children' => $children,
                 ];
 
-                if ($parent->type === 'income' || $parentIncome > $parentExpense) {
-                    $incomeHierarchy[] = $entry;
-                } else {
-                    $expenseHierarchy[] = $entry;
-                }
-
                 if ($parentExpense > 0) {
                     $treemapData[] = [
                         'x' => $parent->name,
@@ -120,16 +113,13 @@ class CategoryAnalysisController extends Controller
             }
         }
 
-        // Sort by total descending
-        usort($expenseHierarchy, fn ($a, $b) => $b['expense'] <=> $a['expense']);
-        usort($incomeHierarchy, fn ($a, $b) => $b['income'] <=> $a['income']);
+        usort($treemapData, fn ($a, $b) => $b['y'] <=> $a['y']);
 
         return Inertia::render('Categories/Analysis', [
             'selectedMonth' => $selectedMonth,
             'prevMonth' => $prevMonth,
             'nextMonth' => $nextMonth,
-            'expenseHierarchy' => $expenseHierarchy,
-            'incomeHierarchy' => $incomeHierarchy,
+            'hierarchy' => $hierarchy,
             'treemapData' => $treemapData,
             'totalExpenses' => round($totalExpenses, 2),
             'totalIncome' => round($totalIncome, 2),
