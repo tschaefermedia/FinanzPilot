@@ -54,84 +54,55 @@ class CategoryAnalysisController extends Controller
         $totalExpenses = $categoryTotals->sum('expense_total');
         $totalIncome = $categoryTotals->sum('income_total');
 
-        // Sum a category's own totals plus every descendant's, recursively.
-        $subtreeTotals = function (Category $category) use (&$subtreeTotals, $categoryTotals, $childrenByParent): array {
+        // Build a full recursive node (own totals + every descendant's), pruning
+        // subtrees with no activity. Works at any nesting depth.
+        $buildNode = function (Category $category) use (&$buildNode, $categoryTotals, $childrenByParent, $totalExpenses, $totalIncome): ?array {
             $expense = (float) ($categoryTotals[$category->id]?->expense_total ?? 0);
             $income = (float) ($categoryTotals[$category->id]?->income_total ?? 0);
             $count = (int) ($categoryTotals[$category->id]?->transaction_count ?? 0);
 
+            $children = [];
             foreach ($childrenByParent[$category->id] ?? [] as $child) {
-                $childTotals = $subtreeTotals($child);
-                $expense += $childTotals['expense'];
-                $income += $childTotals['income'];
-                $count += $childTotals['count'];
+                $childNode = $buildNode($child);
+                if ($childNode !== null) {
+                    $expense += $childNode['expense'];
+                    $income += $childNode['income'];
+                    $count += $childNode['transactionCount'];
+                    $children[] = $childNode;
+                }
             }
 
-            return ['expense' => $expense, 'income' => $income, 'count' => $count];
+            if ($expense <= 0 && $income <= 0) {
+                return null;
+            }
+
+            return [
+                'id' => $category->id,
+                'name' => $category->name,
+                'type' => $category->type,
+                'expense' => round($expense, 2),
+                'income' => round($income, 2),
+                'transactionCount' => $count,
+                'expensePercent' => $totalExpenses > 0 ? round(($expense / $totalExpenses) * 100, 1) : 0,
+                'incomePercent' => $totalIncome > 0 ? round(($income / $totalIncome) * 100, 1) : 0,
+                'budget' => $category->budget_monthly,
+                'children' => $children,
+            ];
         };
 
         $hierarchy = [];
-        $treemapData = [];
-
-        foreach ($allCategories->whereNull('parent_id') as $parent) {
-            $parentTotals = $subtreeTotals($parent);
-            $parentExpense = $parentTotals['expense'];
-            $parentIncome = $parentTotals['income'];
-            $parentTxCount = $parentTotals['count'];
-
-            $children = [];
-            foreach ($childrenByParent[$parent->id] ?? [] as $child) {
-                $childTotals = $subtreeTotals($child);
-                $childExpense = $childTotals['expense'];
-                $childIncome = $childTotals['income'];
-                $childTxCount = $childTotals['count'];
-
-                if ($childExpense > 0 || $childIncome > 0) {
-                    $children[] = [
-                        'id' => $child->id,
-                        'name' => $child->name,
-                        'type' => $child->type,
-                        'expense' => round($childExpense, 2),
-                        'income' => round($childIncome, 2),
-                        'transactionCount' => $childTxCount,
-                        'expensePercent' => $totalExpenses > 0 ? round(($childExpense / $totalExpenses) * 100, 1) : 0,
-                        'incomePercent' => $totalIncome > 0 ? round(($childIncome / $totalIncome) * 100, 1) : 0,
-                        'budget' => $child->budget_monthly,
-                    ];
-                }
-            }
-
-            if ($parentExpense > 0 || $parentIncome > 0) {
-                $hierarchy[] = [
-                    'id' => $parent->id,
-                    'name' => $parent->name,
-                    'type' => $parent->type,
-                    'expense' => round($parentExpense, 2),
-                    'income' => round($parentIncome, 2),
-                    'transactionCount' => $parentTxCount,
-                    'expensePercent' => $totalExpenses > 0 ? round(($parentExpense / $totalExpenses) * 100, 1) : 0,
-                    'incomePercent' => $totalIncome > 0 ? round(($parentIncome / $totalIncome) * 100, 1) : 0,
-                    'budget' => $parent->budget_monthly,
-                    'children' => $children,
-                ];
-
-                if ($parentExpense > 0) {
-                    $treemapData[] = [
-                        'x' => $parent->name,
-                        'y' => round($parentExpense, 2),
-                    ];
-                }
+        foreach ($allCategories->whereNull('parent_id') as $root) {
+            $node = $buildNode($root);
+            if ($node !== null) {
+                $hierarchy[] = $node;
             }
         }
-
-        usort($treemapData, fn ($a, $b) => $b['y'] <=> $a['y']);
 
         return Inertia::render('Categories/Analysis', [
             'selectedMonth' => $selectedMonth,
             'prevMonth' => $prevMonth,
             'nextMonth' => $nextMonth,
             'hierarchy' => $hierarchy,
-            'treemapData' => $treemapData,
             'totalExpenses' => round($totalExpenses, 2),
             'totalIncome' => round($totalIncome, 2),
         ]);

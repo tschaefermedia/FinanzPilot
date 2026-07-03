@@ -70,6 +70,8 @@ class CategoryAnalysisControllerTest extends TestCase
             ->where('hierarchy.0.expense', 250)          // parent rolls up the grandchild
             ->where('hierarchy.0.children.0.name', 'Nebenkosten')
             ->where('hierarchy.0.children.0.expense', 250) // direct child rolls up its own subtree
+            ->where('hierarchy.0.children.0.children.0.name', 'Strom') // full depth reaches the frontend
+            ->where('hierarchy.0.children.0.children.0.expense', 250)
         );
     }
 
