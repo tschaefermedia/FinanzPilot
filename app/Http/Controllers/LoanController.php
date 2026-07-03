@@ -181,10 +181,26 @@ class LoanController extends Controller
     /**
      * Return unmatched transactions that could belong to this loan.
      */
-    public function unmatchedTransactions(Loan $loan)
+    public function unmatchedTransactions(Request $request, Loan $loan)
     {
         $query = Transaction::where('amount', '<', 0)
             ->whereDoesntHave('loanPayment');
+
+        // Optional free-text / amount search so older payments stay reachable.
+        $search = trim((string) $request->query('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', '%'.$search.'%')
+                    ->orWhere('counterparty', 'like', '%'.$search.'%')
+                    ->orWhere('reference', 'like', '%'.$search.'%');
+
+                $numeric = str_replace([' ', ','], ['', '.'], $search);
+                if (is_numeric($numeric)) {
+                    // CAST(... AS REAL): SQLite binds PHP floats as text, breaking numeric comparison.
+                    $q->orWhereRaw('ROUND(ABS(amount), 2) = CAST(? AS REAL)', [round((float) $numeric, 2)]);
+                }
+            });
+        }
 
         // Sort matches to the top, then by date descending
         if ($loan->match_description) {
@@ -197,7 +213,7 @@ class LoanController extends Controller
 
         $query->orderByDesc('date');
 
-        $transactions = $query->limit(50)->get(['id', 'date', 'description', 'counterparty', 'amount', 'account_id']);
+        $transactions = $query->limit(100)->get(['id', 'date', 'description', 'counterparty', 'amount', 'account_id']);
 
         // Mark which ones match the text
         if ($loan->match_description) {
