@@ -60,6 +60,10 @@ function getPercent(node) {
     return activeView.value === 'expense' ? node.expensePercent : node.incomePercent;
 }
 
+function getMonthlyAverage(node) {
+    return activeView.value === 'expense' ? node.avgMonthlyExpense : node.avgMonthlyIncome;
+}
+
 // Recursively turn the category tree into PrimeVue TreeTable nodes, keeping only
 // branches that have a value for the active view, largest first — any depth.
 function toTreeNodes(nodes) {
@@ -198,6 +202,11 @@ const treemapSeries = computed(() => [{
                     <Column header="Betrag">
                         <template #body="{ node }">
                             {{ formatCurrency(getAmount(node.data)) }}
+                        </template>
+                    </Column>
+                    <Column header="Mtl. Durchschnitt">
+                        <template #body="{ node }">
+                            <span class="text-gray-500 dark:text-gray-400">{{ formatCurrency(getMonthlyAverage(node.data)) }}</span>
                         </template>
                     </Column>
                     <Column header="Anteil">
