@@ -16,7 +16,14 @@ COPY . .
 RUN composer dump-autoload --optimize
 
 # Stage 3: PHP application
-FROM ghcr.io/tschaefermedia/finanzpilot-base:php8.4-fpm
+FROM php:8.4-fpm
+
+RUN apt-get update && apt-get install -y \
+    libsqlite3-dev libicu-dev libzip-dev libpng-dev libjpeg-dev \
+    libfreetype6-dev libonig-dev unzip git cron \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_sqlite mbstring intl zip gd bcmath \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /var/www/html
 

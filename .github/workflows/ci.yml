@@ -50,8 +50,6 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    permissions:
-      packages: read
     steps:
       - uses: actions/checkout@v4
 
@@ -65,14 +63,6 @@ jobs:
         run: |
           npm ci
           npm run build
-
-      # The Dockerfile's final stage pulls the private ghcr.io base image.
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Docker image
         run: docker build -f docker/php/Dockerfile -t finanzpilot:ci .
