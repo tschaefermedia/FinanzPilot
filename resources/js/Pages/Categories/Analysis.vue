@@ -9,10 +9,9 @@ import { computed, defineAsyncComponent, ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import DatePicker from 'primevue/datepicker';
-import DataTable from 'primevue/datatable';
+import TreeTable from 'primevue/treetable';
 import Column from 'primevue/column';
 import SelectButton from 'primevue/selectbutton';
-import Tag from 'primevue/tag';
 
 const VueApexCharts = defineAsyncComponent(() => import('vue3-apexcharts'));
 
@@ -26,7 +25,6 @@ const props = defineProps({
     prevMonth: { type: String, default: null },
     nextMonth: { type: String, default: null },
     hierarchy: { type: Array, default: () => [] },
-    treemapData: { type: Array, default: () => [] },
     totalExpenses: { type: Number, default: 0 },
     totalIncome: { type: Number, default: 0 },
 });
@@ -52,15 +50,45 @@ const viewOptions = [
 ];
 const activeView = ref('expense');
 
-const expandedRows = ref({});
-
 const amountKey = computed(() => activeView.value === 'expense' ? 'expense' : 'income');
 
-const currentData = computed(() => {
+function getAmount(node) {
+    return node[amountKey.value];
+}
+
+function getPercent(node) {
+    return activeView.value === 'expense' ? node.expensePercent : node.incomePercent;
+}
+
+// Recursively turn the category tree into PrimeVue TreeTable nodes, keeping only
+// branches that have a value for the active view, largest first — any depth.
+function toTreeNodes(nodes) {
     const key = amountKey.value;
-    return props.hierarchy
-        .filter(row => row[key] > 0)
-        .sort((a, b) => b[key] - a[key]);
+    return nodes
+        .filter((n) => n[key] > 0)
+        .map((n) => ({
+            key: String(n.id),
+            data: n,
+            children: toTreeNodes(n.children || []),
+        }))
+        .sort((a, b) => b.data[key] - a.data[key]);
+}
+
+const treeNodes = computed(() => toTreeNodes(props.hierarchy));
+
+// For the charts, descend past single "wrapper" roots (e.g. an Ausgaben /
+// Einnahmen umbrella) to the first level that actually has a breakdown.
+const chartNodes = computed(() => {
+    const key = amountKey.value;
+    let nodes = props.hierarchy.filter((n) => n[key] > 0);
+    while (nodes.length === 1) {
+        const children = (nodes[0].children || []).filter((n) => n[key] > 0);
+        if (children.length === 0) {
+            break;
+        }
+        nodes = children;
+    }
+    return [...nodes].sort((a, b) => b[key] - a[key]);
 });
 
 const currentTotal = computed(() =>
@@ -69,10 +97,13 @@ const currentTotal = computed(() =>
 
 const hasData = computed(() => props.hierarchy.length > 0);
 
-function visibleChildren(row) {
-    const key = amountKey.value;
-    return (row.children || []).filter(child => child[key] > 0);
-}
+// Expand the top level by default so the breakdown is visible immediately.
+const expandedKeys = ref({});
+watch(treeNodes, (nodes) => {
+    const keys = {};
+    nodes.forEach((n) => { keys[n.key] = true; });
+    expandedKeys.value = keys;
+}, { immediate: true });
 
 function navigateMonth(month) {
     router.get('/categories/analysis', { month }, { preserveState: true });
@@ -88,7 +119,7 @@ const donutColors = ['#3b82f6', '#ef4444', '#f59e0b', '#22c55e', '#8b5cf6', '#ec
 const donutOptions = computed(() => ({
     chart: { type: 'donut', height: 300, fontFamily: 'Inter, sans-serif', background: 'transparent' },
     theme: { mode: isDark.value ? 'dark' : 'light' },
-    labels: currentData.value.map(d => d.name),
+    labels: chartNodes.value.map((n) => n.name),
     colors: donutColors,
     legend: { position: 'bottom', labels: { colors: chartTextColor.value } },
     tooltip: {
@@ -98,9 +129,7 @@ const donutOptions = computed(() => ({
     dataLabels: { enabled: false },
 }));
 
-const donutSeries = computed(() =>
-    currentData.value.map(d => activeView.value === 'expense' ? d.expense : d.income)
-);
+const donutSeries = computed(() => chartNodes.value.map((n) => getAmount(n)));
 
 const treemapOptions = computed(() => ({
     chart: { type: 'treemap', height: 300, toolbar: { show: false }, fontFamily: 'Inter, sans-serif', background: 'transparent' },
@@ -118,16 +147,8 @@ const treemapOptions = computed(() => ({
 }));
 
 const treemapSeries = computed(() => [{
-    data: props.treemapData,
+    data: chartNodes.value.map((n) => ({ x: n.name, y: getAmount(n) })),
 }]);
-
-function getAmount(row) {
-    return activeView.value === 'expense' ? row.expense : row.income;
-}
-
-function getPercent(row) {
-    return activeView.value === 'expense' ? row.expensePercent : row.incomePercent;
-}
 </script>
 
 <template>
@@ -154,12 +175,12 @@ function getPercent(row) {
         </div>
 
         <template v-if="hasData">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div v-if="chartNodes.length" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Verteilung</h3>
                     <VueApexCharts type="donut" :options="donutOptions" :series="donutSeries" height="300" />
                 </div>
-                <div v-if="activeView === 'expense' && treemapData.length > 0" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Treemap</h3>
                     <VueApexCharts type="treemap" :options="treemapOptions" :series="treemapSeries" height="300" />
                 </div>
@@ -167,74 +188,34 @@ function getPercent(row) {
 
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
                 <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Detailansicht</h3>
-                <DataTable
-                    :value="currentData"
-                    v-model:expandedRows="expandedRows"
-                    dataKey="id"
-                    stripedRows
-                    size="small"
-                >
-                    <Column expander style="width: 3rem" />
-                    <Column field="name" header="Kategorie" sortable>
-                        <template #body="{ data }">
-                            <span class="font-medium">{{ data.name }}</span>
-                            <span class="text-xs text-gray-400 ml-2">({{ data.transactionCount }})</span>
+                <TreeTable :value="treeNodes" v-model:expandedKeys="expandedKeys" size="small">
+                    <Column field="name" header="Kategorie" expander>
+                        <template #body="{ node }">
+                            <span class="font-medium">{{ node.data.name }}</span>
+                            <span class="text-xs text-gray-400 ml-2">({{ node.data.transactionCount }})</span>
                         </template>
                     </Column>
-                    <Column header="Betrag" sortable :sortField="activeView === 'expense' ? 'expense' : 'income'">
-                        <template #body="{ data }">
-                            {{ formatCurrency(getAmount(data)) }}
+                    <Column header="Betrag">
+                        <template #body="{ node }">
+                            {{ formatCurrency(getAmount(node.data)) }}
                         </template>
                     </Column>
                     <Column header="Anteil">
-                        <template #body="{ data }">
-                            {{ getPercent(data) }}%
+                        <template #body="{ node }">
+                            {{ getPercent(node.data) }}%
                         </template>
                     </Column>
                     <Column header="Budget">
-                        <template #body="{ data }">
-                            <template v-if="data.budget">
-                                <span :class="data.expense > data.budget ? 'text-red-600 font-semibold' : 'text-green-600'">
-                                    {{ formatCurrency(getAmount(data)) }} / {{ formatCurrency(data.budget) }}
+                        <template #body="{ node }">
+                            <template v-if="node.data.budget">
+                                <span :class="node.data.expense > node.data.budget ? 'text-red-600 font-semibold' : 'text-green-600'">
+                                    {{ formatCurrency(getAmount(node.data)) }} / {{ formatCurrency(node.data.budget) }}
                                 </span>
                             </template>
                             <span v-else class="text-gray-400">—</span>
                         </template>
                     </Column>
-                    <template #expansion="{ data }">
-                        <div v-if="visibleChildren(data).length > 0" class="pl-8">
-                            <DataTable :value="visibleChildren(data)" size="small">
-                                <Column field="name" header="Unterkategorie">
-                                    <template #body="{ data: child }">
-                                        <span class="text-sm">{{ child.name }}</span>
-                                        <span class="text-xs text-gray-400 ml-2">({{ child.transactionCount }})</span>
-                                    </template>
-                                </Column>
-                                <Column header="Betrag">
-                                    <template #body="{ data: child }">
-                                        {{ formatCurrency(getAmount(child)) }}
-                                    </template>
-                                </Column>
-                                <Column header="Anteil">
-                                    <template #body="{ data: child }">
-                                        {{ getPercent(child) }}%
-                                    </template>
-                                </Column>
-                                <Column header="Budget">
-                                    <template #body="{ data: child }">
-                                        <template v-if="child.budget">
-                                            <span :class="child.expense > child.budget ? 'text-red-600 font-semibold' : 'text-green-600'">
-                                                {{ formatCurrency(getAmount(child)) }} / {{ formatCurrency(child.budget) }}
-                                            </span>
-                                        </template>
-                                        <span v-else class="text-gray-400">—</span>
-                                    </template>
-                                </Column>
-                            </DataTable>
-                        </div>
-                        <div v-else class="pl-8 py-2 text-sm text-gray-500">Keine Unterkategorien</div>
-                    </template>
-                </DataTable>
+                </TreeTable>
             </div>
         </template>
         <template v-else>
@@ -242,12 +223,3 @@ function getPercent(row) {
         </template>
     </AppLayout>
 </template>
-
-<style scoped>
-/* PrimeVue's striped-row rule is a descendant selector, so the outer striped
-   table bleeds zebra striping onto the nested expansion tables' odd rows.
-   Reset it (extra .p-datatable-striped in the selector outranks the vendor rule). */
-:deep(.p-datatable-striped .p-datatable-row-expansion .p-datatable-tbody > tr.p-row-odd) {
-    background: transparent;
-}
-</style>
