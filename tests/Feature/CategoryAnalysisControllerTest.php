@@ -41,10 +41,35 @@ class CategoryAnalysisControllerTest extends TestCase
         $response = $this->get('/categories/analysis');
 
         $response->assertInertia(fn ($page) => $page
-            ->has('expenseHierarchy', 1)
-            ->where('expenseHierarchy.0.name', 'Wohnen')
-            ->where('expenseHierarchy.0.expense', 900)
-            ->has('expenseHierarchy.0.children', 2)
+            ->has('hierarchy', 1)
+            ->where('hierarchy.0.name', 'Wohnen')
+            ->where('hierarchy.0.expense', 900)
+            ->has('hierarchy.0.children', 2)
+        );
+    }
+
+    public function test_aggregates_across_arbitrary_nesting_depth(): void
+    {
+        $parent = Category::create(['name' => 'Wohnen', 'type' => 'expense']);
+        $child = Category::create(['name' => 'Nebenkosten', 'type' => 'expense', 'parent_id' => $parent->id]);
+        $grandchild = Category::create(['name' => 'Strom', 'type' => 'expense', 'parent_id' => $child->id]);
+
+        // Booked directly on the deepest (3rd-level) category.
+        Transaction::create([
+            'date' => now()->format('Y-m-d'),
+            'amount' => -250,
+            'description' => 'Strom',
+            'category_id' => $grandchild->id,
+        ]);
+
+        $response = $this->get('/categories/analysis');
+
+        $response->assertInertia(fn ($page) => $page
+            ->has('hierarchy', 1)
+            ->where('hierarchy.0.name', 'Wohnen')
+            ->where('hierarchy.0.expense', 250)          // parent rolls up the grandchild
+            ->where('hierarchy.0.children.0.name', 'Nebenkosten')
+            ->where('hierarchy.0.children.0.expense', 250) // direct child rolls up its own subtree
         );
     }
 
@@ -69,7 +94,7 @@ class CategoryAnalysisControllerTest extends TestCase
 
         $response->assertInertia(fn ($page) => $page
             ->where('selectedMonth', '2026-01')
-            ->where('expenseHierarchy.0.expense', 50)
+            ->where('hierarchy.0.expense', 50)
         );
     }
 }
