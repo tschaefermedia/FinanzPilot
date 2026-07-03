@@ -31,6 +31,7 @@ class CategoryController extends Controller
             'type' => 'required|in:income,expense,transfer',
             'icon' => 'nullable|string',
             'parent_id' => 'nullable|exists:categories,id',
+            'budget_monthly' => 'nullable|numeric|min:0',
         ]);
 
         Category::create($validated);
@@ -45,6 +46,7 @@ class CategoryController extends Controller
             'type' => 'required|in:income,expense,transfer',
             'icon' => 'nullable|string',
             'parent_id' => 'nullable|exists:categories,id',
+            'budget_monthly' => 'nullable|numeric|min:0',
         ]);
 
         $category->update($validated);
@@ -74,6 +76,7 @@ class CategoryController extends Controller
                 'type' => $category->type,
                 'icon' => $category->icon,
                 'parent_id' => $category->parent_id,
+                'budget_monthly' => $category->budget_monthly,
                 'transactionsCount' => $category->transactions_count ?? 0,
             ],
             'children' => [],

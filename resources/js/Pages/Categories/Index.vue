@@ -10,6 +10,7 @@ import Column from 'primevue/column';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 
@@ -26,6 +27,7 @@ const form = useForm({
     name: '',
     type: 'expense',
     parent_id: null,
+    budget_monthly: null,
 });
 
 const typeOptions = [
@@ -54,6 +56,7 @@ function openEdit(category) {
     form.name = category.name;
     form.type = category.type;
     form.parent_id = category.parent_id || null;
+    form.budget_monthly = category.budget_monthly ?? null;
     showDialog.value = true;
 }
 
@@ -134,6 +137,12 @@ function deleteCategory(id) {
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Typ</label>
                     <Select v-model="form.type" :options="typeOptions" optionLabel="label" optionValue="value" class="w-full" />
+                </div>
+
+                <div v-if="form.type === 'expense'">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Monatliches Budget</label>
+                    <InputNumber v-model="form.budget_monthly" mode="currency" currency="EUR" locale="de-DE" :min="0" class="w-full" inputClass="w-full" placeholder="Optional" />
+                    <small v-if="form.errors.budget_monthly" class="text-red-500">{{ form.errors.budget_monthly }}</small>
                 </div>
 
                 <div class="flex justify-end gap-2 pt-2">
