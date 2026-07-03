@@ -5,7 +5,7 @@ import StatCard from '@/Components/StatCard.vue';
 import { useFormatters } from '@/Composables/useFormatters.js';
 import { useTheme } from '@/Composables/useTheme.js';
 import { useForm, router } from '@inertiajs/vue3';
-import { ref, computed, defineAsyncComponent } from 'vue';
+import { ref, computed, defineAsyncComponent, watch } from 'vue';
 
 const VueApexCharts = defineAsyncComponent(() => import('vue3-apexcharts'));
 import DataTable from 'primevue/datatable';
@@ -13,6 +13,7 @@ import Column from 'primevue/column';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputNumber from 'primevue/inputnumber';
+import InputText from 'primevue/inputtext';
 import DatePicker from 'primevue/datepicker';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
@@ -63,18 +64,34 @@ function autoMatch() {
 const showMatchDialog = ref(false);
 const unmatchedTransactions = ref([]);
 const loadingTransactions = ref(false);
+const matchSearch = ref('');
+let searchTimer = null;
 
-async function openMatchDialog() {
+async function fetchUnmatched() {
     loadingTransactions.value = true;
-    showMatchDialog.value = true;
     try {
-        const response = await fetch(`/loans/${props.loan.id}/unmatched-transactions`);
+        const url = new URL(`/loans/${props.loan.id}/unmatched-transactions`, window.location.origin);
+        if (matchSearch.value) {
+            url.searchParams.set('search', matchSearch.value);
+        }
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to load transactions');
         unmatchedTransactions.value = await response.json();
     } finally {
         loadingTransactions.value = false;
     }
 }
+
+function openMatchDialog() {
+    matchSearch.value = '';
+    showMatchDialog.value = true;
+    fetchUnmatched();
+}
+
+watch(matchSearch, () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(fetchUnmatched, 300);
+});
 
 function matchTransaction(transactionId) {
     router.post(`/loans/${props.loan.id}/match-transaction`, { transaction_id: transactionId }, {
@@ -216,6 +233,12 @@ const chartSeries = computed(() => [
 
         <!-- Match Transaction Dialog -->
         <Dialog v-model:visible="showMatchDialog" header="Buchung zuordnen" modal class="w-full max-w-2xl">
+            <div class="mb-3">
+                <span class="relative block">
+                    <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <InputText v-model="matchSearch" placeholder="Nach Beschreibung, Empfänger oder Betrag suchen..." class="w-full pl-9" />
+                </span>
+            </div>
             <div v-if="loadingTransactions" class="py-8 text-center text-gray-500 text-sm">Buchungen werden geladen...</div>
             <div v-else-if="unmatchedTransactions.length === 0" class="py-8 text-center text-gray-400 dark:text-gray-400 text-sm">Keine passenden Buchungen gefunden.</div>
             <DataTable v-else :value="unmatchedTransactions" class="text-sm" :rows="10" paginator :rowClass="(data) => data.is_match ? 'bg-green-50 dark:bg-green-900/20' : ''">
