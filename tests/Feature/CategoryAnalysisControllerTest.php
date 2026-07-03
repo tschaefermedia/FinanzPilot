@@ -70,6 +70,25 @@ class CategoryAnalysisControllerTest extends TestCase
             ->where('hierarchy.0.expense', 250)          // parent rolls up the grandchild
             ->where('hierarchy.0.children.0.name', 'Nebenkosten')
             ->where('hierarchy.0.children.0.expense', 250) // direct child rolls up its own subtree
+            ->where('hierarchy.0.children.0.children.0.name', 'Strom') // full depth reaches the frontend
+            ->where('hierarchy.0.children.0.children.0.expense', 250)
+        );
+    }
+
+    public function test_monthly_average_counts_only_months_up_to_selected_month(): void
+    {
+        $category = Category::create(['name' => 'Wohnen', 'type' => 'expense']);
+        Transaction::create(['date' => '2026-01-15', 'amount' => -300, 'description' => 'Jan', 'category_id' => $category->id]);
+        Transaction::create(['date' => '2026-02-15', 'amount' => -100, 'description' => 'Feb', 'category_id' => $category->id]);
+
+        // February selected: 400 cumulative over 2 months (Jan + Feb) = 200.
+        $this->get('/categories/analysis?month=2026-02')->assertInertia(fn ($page) => $page
+            ->where('hierarchy.0.avgMonthlyExpense', 200)
+        );
+
+        // January selected: only January counts, over 1 month = 300.
+        $this->get('/categories/analysis?month=2026-01')->assertInertia(fn ($page) => $page
+            ->where('hierarchy.0.avgMonthlyExpense', 300)
         );
     }
 
