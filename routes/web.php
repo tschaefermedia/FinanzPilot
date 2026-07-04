@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AiAnalysisController;
 use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AiInsightsController;
+use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CategoryAnalysisController;
 use App\Http\Controllers\CategoryController;
@@ -55,6 +56,10 @@ Route::post('calendar/payments', [CalendarController::class, 'store'])->name('ca
 Route::put('calendar/payments/{scheduledPayment}', [CalendarController::class, 'update'])->name('calendar.update');
 Route::delete('calendar/payments/{scheduledPayment}', [CalendarController::class, 'destroy'])->name('calendar.destroy');
 Route::post('calendar/payments/{scheduledPayment}/complete', [CalendarController::class, 'complete'])->name('calendar.complete');
+
+// Budgets
+Route::get('budgets', BudgetController::class)->name('budgets.index');
+Route::put('budgets/{category}', [BudgetController::class, 'update'])->name('budgets.update');
 
 // Trends
 Route::get('trends', TrendController::class)->name('trends');

@@ -6,6 +6,7 @@ use App\Models\Account;
 use App\Models\Category;
 use App\Models\RecurringTemplate;
 use App\Models\Transaction;
+use App\Services\RecurringDetector;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -22,6 +23,7 @@ class RecurringTemplateController extends Controller
             'templates' => $templates,
             'categories' => Category::tree(),
             'accounts' => Account::activeOrdered()->get(),
+            'suggestions' => (new RecurringDetector)->detect(),
         ]);
     }
 

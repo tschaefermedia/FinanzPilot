@@ -25,6 +25,7 @@ const props = defineProps({
     templates: { type: Array, default: () => [] },
     categories: { type: Array, default: () => [] },
     accounts: { type: Array, default: () => [] },
+    suggestions: { type: Array, default: () => [] },
 });
 
 const showDialog = ref(false);
@@ -113,6 +114,19 @@ function deleteTemplate(id) {
 function generateNow(id) {
     router.post(`/recurring/${id}/generate`);
 }
+
+function applySuggestion(s) {
+    editingTemplate.value = null;
+    form.reset();
+    form.description = s.description;
+    form.amount = parseFloat(s.amount);
+    form.category_id = s.category_id;
+    form.frequency = s.frequency;
+    form.next_due_date = new Date(s.next_due_date);
+    form.is_active = true;
+    form.auto_generate = false;
+    showDialog.value = true;
+}
 </script>
 
 <template>
@@ -120,6 +134,32 @@ function generateNow(id) {
         <PageHeader title="Daueraufträge">
             <Button label="Neuer Dauerauftrag" icon="pi pi-plus" size="small" @click="openCreate" />
         </PageHeader>
+
+        <div v-if="suggestions.length > 0" class="mb-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-900/40 p-4">
+            <div class="flex items-center gap-2 mb-3">
+                <i class="pi pi-sparkles text-blue-600 dark:text-blue-400"></i>
+                <span class="font-medium text-gray-900 dark:text-white">Erkannte wiederkehrende Zahlungen</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">— aus deinen Buchungen abgeleitet</span>
+            </div>
+            <div class="space-y-2">
+                <div
+                    v-for="(s, i) in suggestions"
+                    :key="i"
+                    class="flex items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-md px-3 py-2 border border-gray-100 dark:border-gray-700"
+                >
+                    <div class="min-w-0">
+                        <span class="font-medium text-sm">{{ s.description }}</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500 ml-2">{{ s.occurrences }}× · {{ frequencyLabel(s.frequency) }}</span>
+                    </div>
+                    <div class="flex items-center gap-3 shrink-0">
+                        <span :class="s.amount >= 0 ? 'text-green-600 text-sm font-medium' : 'text-red-600 text-sm font-medium'">
+                            {{ formatCurrency(s.amount) }}
+                        </span>
+                        <Button label="Übernehmen" icon="pi pi-plus" size="small" text @click="applySuggestion(s)" />
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
             <DataTable v-if="templates.length > 0" :value="templates" class="text-sm">
