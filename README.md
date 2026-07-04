@@ -2,6 +2,8 @@
 
 Self-hosted personal finance web application. Track income, expenses, bank imports, recurring transactions, loans, and get AI-powered insights — all without relying on third-party SaaS.
 
+**Privacy-first AI.** Point an LLM at your finances without handing over your bank statements: everything is anonymized to percentages of income before it leaves the app — no absolute amounts, no counterparty names, no identifiers. Or run it fully offline with a local Ollama model, so nothing leaves your machine at all.
+
 ![Dashboard](docs/overview.png)
 
 ## Features
@@ -10,7 +12,8 @@ Self-hosted personal finance web application. Track income, expenses, bank impor
 - **Transaction tracking** — Manual entry and CSV import (Sparkasse, PayPal, generic CSV)
 - **Smart categorization** — Self-learning rule engine that improves with each manual categorization
 - **Multiple accounts** — Track checking, savings, credit card, and cash accounts separately
-- **Recurring transactions** — Templates with auto-generation for rent, salary, subscriptions
+- **Recurring transactions** — Templates with auto-generation for rent, salary, subscriptions, plus automatic detection of recurring payments from your imports
+- **Budgets** — Per-category monthly budgets with an envelope-style view of spent vs. remaining
 - **Loan management** — Bank loans with amortization schedules, informal debt tracking
 - **Excel export** — German-formatted .xlsx files for tax advisors
 - **AI insights** — Privacy-first financial analysis (data is anonymized before sending)
@@ -48,7 +51,7 @@ Self-hosted personal finance web application. Track income, expenses, bank impor
 
 ```bash
 git clone https://github.com/tschaefermedia/FinanzPilot.git
-cd financial-pilot
+cd FinanzPilot
 cp .env.example .env
 docker compose build
 docker compose up -d
