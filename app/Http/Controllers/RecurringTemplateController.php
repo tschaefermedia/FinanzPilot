@@ -71,6 +71,18 @@ class RecurringTemplateController extends Controller
     }
 
     /**
+     * Dismiss a detected recurring suggestion so it is not surfaced again.
+     */
+    public function dismissSuggestion(Request $request)
+    {
+        $validated = $request->validate(['signature' => 'required|string']);
+
+        (new RecurringDetector)->dismiss($validated['signature']);
+
+        return redirect()->back();
+    }
+
+    /**
      * Manually trigger generation of a single template's next transaction.
      */
     public function generate(RecurringTemplate $recurring)

@@ -3,17 +3,20 @@
 namespace App\Services;
 
 use App\Models\RecurringTemplate;
+use App\Models\Setting;
 use App\Models\Transaction;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class RecurringDetector
 {
+    private const DISMISSED_KEY = 'dismissed_recurring';
+
     /**
      * Detect likely recurring payments from recent transactions that are not
-     * already covered by an active template.
+     * already covered by a template or dismissed by the user.
      *
-     * @return array<int, array{description:string, counterparty:?string, amount:float, frequency:string, next_due_date:string, category_id:?int, occurrences:int}>
+     * @return array<int, array{signature:string, description:string, counterparty:?string, amount:float, frequency:string, next_due_date:string, category_id:?int, occurrences:int}>
      */
     public function detect(int $months = 6, int $minOccurrences = 3): array
     {
@@ -32,11 +35,12 @@ class RecurringDetector
             $groups[$key][] = $t;
         }
 
-        $existing = RecurringTemplate::where('is_active', true)->get();
+        $templates = RecurringTemplate::all();
+        $dismissed = $this->dismissedSignatures();
         $suggestions = [];
 
-        foreach ($groups as $items) {
-            if (count($items) < $minOccurrences) {
+        foreach ($groups as $signature => $items) {
+            if (count($items) < $minOccurrences || in_array($signature, $dismissed, true)) {
                 continue;
             }
 
@@ -47,15 +51,16 @@ class RecurringDetector
 
             $last = end($items);
             $amount = round(array_sum(array_map(fn ($t) => (float) $t->amount, $items)) / count($items), 2);
-            $description = $last->description;
+            $rawDescription = (string) $last->description;
             $counterparty = $last->counterparty;
 
-            if ($this->alreadyCovered($existing, $description, $counterparty, $amount)) {
+            if ($this->alreadyCovered($templates, $rawDescription, $counterparty, $amount)) {
                 continue;
             }
 
             $suggestions[] = [
-                'description' => $description,
+                'signature' => $signature,
+                'description' => $this->cleanLabel($counterparty, $rawDescription),
                 'counterparty' => $counterparty,
                 'amount' => $amount,
                 'frequency' => $frequency,
@@ -70,12 +75,62 @@ class RecurringDetector
         return $suggestions;
     }
 
+    /**
+     * Mark a suggestion signature as dismissed so it is not surfaced again.
+     */
+    public function dismiss(string $signature): void
+    {
+        $dismissed = $this->dismissedSignatures();
+        if (! in_array($signature, $dismissed, true)) {
+            $dismissed[] = $signature;
+            Setting::set(self::DISMISSED_KEY, json_encode($dismissed));
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function dismissedSignatures(): array
+    {
+        return json_decode((string) Setting::get(self::DISMISSED_KEY, '[]'), true) ?: [];
+    }
+
     private function normalizeKey(string $value): string
     {
         $value = mb_strtolower($value);
         $value = preg_replace('/\d+/', '', $value);      // strip dates/refs
 
         return trim(preg_replace('/\s+/', ' ', $value));
+    }
+
+    /**
+     * Build a human-readable label, preferring the (usually clean) counterparty
+     * over the raw description, which is often full of reference/mandate noise.
+     */
+    private function cleanLabel(?string $counterparty, string $description): string
+    {
+        $candidate = trim((string) $counterparty) !== '' ? trim((string) $counterparty) : $description;
+
+        foreach ([$this->stripReferenceNoise($candidate), $this->stripReferenceNoise($description), trim((string) $counterparty)] as $option) {
+            if (trim($option) !== '') {
+                return mb_strimwidth(trim($option), 0, 48, '…');
+            }
+        }
+
+        return 'Wiederkehrende Zahlung';
+    }
+
+    private function stripReferenceNoise(string $text): string
+    {
+        // UUIDs
+        $text = preg_replace('/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i', '', $text);
+        // Long alphanumeric reference/booking codes (contain at least one digit)
+        $text = preg_replace('/\b(?=[0-9a-z\-]*\d)[0-9a-z\-]{8,}\b/i', '', $text);
+        // Standalone long number runs
+        $text = preg_replace('/\b\d{4,}\b/', '', $text);
+        $text = preg_replace('/\s+/', ' ', $text);
+
+        return trim($text, ' -–—:•,.');
     }
 
     /**
@@ -140,16 +195,36 @@ class RecurringDetector
         return (int) array_key_first($counts);
     }
 
-    private function alreadyCovered(Collection $existing, string $description, ?string $counterparty, float $amount): bool
+    /**
+     * A template covers a suggestion when amounts are close and they share a
+     * significant word — matched against both active and inactive templates so
+     * a payment the user already tracks (or paused) is not re-suggested.
+     */
+    private function alreadyCovered(Collection $templates, string $description, ?string $counterparty, float $amount): bool
     {
-        $needle = $this->normalizeKey($counterparty ?: $description);
+        $needleTokens = $this->significantTokens(($counterparty ?: '').' '.$description);
+        if (empty($needleTokens)) {
+            return false;
+        }
 
-        return $existing->contains(function (RecurringTemplate $t) use ($needle, $amount) {
-            $hay = $this->normalizeKey($t->description);
-            $similarText = $needle !== '' && (str_contains($hay, $needle) || str_contains($needle, $hay));
-            $similarAmount = abs(abs((float) $t->amount) - abs($amount)) <= max(1, abs($amount) * 0.05);
+        return $templates->contains(function (RecurringTemplate $t) use ($needleTokens, $amount) {
+            $amountClose = abs(abs((float) $t->amount) - abs($amount)) <= max(1, abs($amount) * 0.10);
 
-            return $similarText && $similarAmount;
+            return $amountClose && ! empty(array_intersect($needleTokens, $this->significantTokens($t->description)));
         });
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function significantTokens(string $text): array
+    {
+        $text = preg_replace('/[^a-zäöüß ]/u', ' ', mb_strtolower($text));
+        $noise = ['abo', 'miete', 'paypal', 'lastschrift', 'service', 'zahlung', 'monatlich', 'basic'];
+
+        return array_values(array_filter(
+            preg_split('/\s+/', trim($text)),
+            fn ($w) => mb_strlen($w) >= 4 && ! in_array($w, $noise, true),
+        ));
     }
 }
