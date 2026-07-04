@@ -4,7 +4,7 @@ import PageHeader from '@/Components/PageHeader.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import { useFormatters } from '@/Composables/useFormatters.js';
 import { useForm, router } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -30,6 +30,11 @@ const props = defineProps({
 
 const showDialog = ref(false);
 const editingTemplate = ref(null);
+
+// Local copy so a dismissed suggestion disappears immediately; kept in sync
+// with fresh server props after the dismiss request completes.
+const localSuggestions = ref([...props.suggestions]);
+watch(() => props.suggestions, (value) => { localSuggestions.value = [...value]; });
 
 const form = useForm({
     description: '',
@@ -115,6 +120,14 @@ function generateNow(id) {
     router.post(`/recurring/${id}/generate`);
 }
 
+function dismissSuggestion(s) {
+    localSuggestions.value = localSuggestions.value.filter((x) => x.signature !== s.signature);
+    router.post('/recurring/suggestions/dismiss', { signature: s.signature }, {
+        preserveScroll: true,
+        preserveState: true,
+    });
+}
+
 function applySuggestion(s) {
     editingTemplate.value = null;
     form.reset();
@@ -135,7 +148,7 @@ function applySuggestion(s) {
             <Button label="Neuer Dauerauftrag" icon="pi pi-plus" size="small" @click="openCreate" />
         </PageHeader>
 
-        <div v-if="suggestions.length > 0" class="mb-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-900/40 p-4">
+        <div v-if="localSuggestions.length > 0" class="mb-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-900/40 p-4">
             <div class="flex items-center gap-2 mb-3">
                 <i class="pi pi-sparkles text-blue-600 dark:text-blue-400"></i>
                 <span class="font-medium text-gray-900 dark:text-white">Erkannte wiederkehrende Zahlungen</span>
@@ -143,19 +156,20 @@ function applySuggestion(s) {
             </div>
             <div class="space-y-2">
                 <div
-                    v-for="(s, i) in suggestions"
-                    :key="i"
+                    v-for="s in localSuggestions"
+                    :key="s.signature"
                     class="flex items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-md px-3 py-2 border border-gray-100 dark:border-gray-700"
                 >
-                    <div class="min-w-0">
+                    <div class="min-w-0 truncate">
                         <span class="font-medium text-sm">{{ s.description }}</span>
-                        <span class="text-xs text-gray-400 dark:text-gray-500 ml-2">{{ s.occurrences }}× · {{ frequencyLabel(s.frequency) }}</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500 ml-2 whitespace-nowrap">{{ s.occurrences }}× · {{ frequencyLabel(s.frequency) }}</span>
                     </div>
-                    <div class="flex items-center gap-3 shrink-0">
+                    <div class="flex items-center gap-2 shrink-0">
                         <span :class="s.amount >= 0 ? 'text-green-600 text-sm font-medium' : 'text-red-600 text-sm font-medium'">
                             {{ formatCurrency(s.amount) }}
                         </span>
                         <Button label="Übernehmen" icon="pi pi-plus" size="small" text @click="applySuggestion(s)" />
+                        <Button icon="pi pi-times" size="small" text severity="secondary" title="Ausblenden / kein Dauerauftrag" @click="dismissSuggestion(s)" />
                     </div>
                 </div>
             </div>

@@ -40,6 +40,7 @@ Route::put('imports/categorize/{transaction}', [ImportController::class, 'catego
 Route::post('imports/bulk-categorize', [ImportController::class, 'bulkCategorize'])->name('imports.bulkCategorize');
 
 // Recurring templates
+Route::post('recurring/suggestions/dismiss', [RecurringTemplateController::class, 'dismissSuggestion'])->name('recurring.suggestions.dismiss');
 Route::resource('recurring', RecurringTemplateController::class)->except(['show', 'create', 'edit']);
 Route::post('recurring/{recurring}/generate', [RecurringTemplateController::class, 'generate'])->name('recurring.generate');
 

@@ -24,4 +24,9 @@ class Setting extends Model
         static::updateOrCreate(['key' => $key], ['value' => $value]);
         static::$cache = null; // Bust cache
     }
+
+    public static function flushCache(): void
+    {
+        static::$cache = null;
+    }
 }
