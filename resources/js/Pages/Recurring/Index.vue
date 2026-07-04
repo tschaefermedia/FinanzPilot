@@ -160,12 +160,15 @@ function applySuggestion(s) {
                     :key="s.signature"
                     class="flex items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-md px-3 py-2 border border-gray-100 dark:border-gray-700"
                 >
-                    <div class="min-w-0 truncate">
-                        <span class="font-medium text-sm">{{ s.description }}</span>
-                        <span class="text-xs text-gray-400 dark:text-gray-500 ml-2 whitespace-nowrap">{{ s.occurrences }}× · {{ frequencyLabel(s.frequency) }}</span>
+                    <div class="min-w-0">
+                        <div class="flex items-baseline gap-2 min-w-0">
+                            <span class="font-medium text-sm text-gray-900 dark:text-white truncate">{{ s.description }}</span>
+                            <span class="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap shrink-0">{{ s.occurrences }}× · {{ frequencyLabel(s.frequency) }}</span>
+                        </div>
+                        <div v-if="s.detail" class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ s.detail }}</div>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
-                        <span :class="s.amount >= 0 ? 'text-green-600 text-sm font-medium' : 'text-red-600 text-sm font-medium'">
+                        <span :class="s.amount >= 0 ? 'text-green-600 text-sm font-medium whitespace-nowrap' : 'text-red-600 text-sm font-medium whitespace-nowrap'">
                             {{ formatCurrency(s.amount) }}
                         </span>
                         <Button label="Übernehmen" icon="pi pi-plus" size="small" text @click="applySuggestion(s)" />

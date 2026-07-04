@@ -16,7 +16,7 @@ class RecurringDetector
      * Detect likely recurring payments from recent transactions that are not
      * already covered by a template or dismissed by the user.
      *
-     * @return array<int, array{signature:string, description:string, counterparty:?string, amount:float, frequency:string, next_due_date:string, category_id:?int, occurrences:int}>
+     * @return array<int, array{signature:string, description:string, detail:?string, counterparty:?string, amount:float, frequency:string, next_due_date:string, category_id:?int, occurrences:int}>
      */
     public function detect(int $months = 6, int $minOccurrences = 3): array
     {
@@ -58,9 +58,12 @@ class RecurringDetector
                 continue;
             }
 
+            $label = $this->cleanLabel($counterparty, $rawDescription);
+
             $suggestions[] = [
                 'signature' => $signature,
-                'description' => $this->cleanLabel($counterparty, $rawDescription),
+                'description' => $label,
+                'detail' => $this->descriptionDetail($rawDescription, $label),
                 'counterparty' => $counterparty,
                 'amount' => $amount,
                 'frequency' => $frequency,
@@ -118,6 +121,22 @@ class RecurringDetector
         }
 
         return 'Wiederkehrende Zahlung';
+    }
+
+    /**
+     * A secondary line (the cleaned purpose/merchant from the description) that
+     * disambiguates suggestions sharing a counterparty — e.g. several different
+     * subscriptions all debited via "PayPal Europe".
+     */
+    private function descriptionDetail(string $description, string $label): ?string
+    {
+        $detail = trim($this->stripReferenceNoise($description));
+
+        if ($detail === '' || $this->normalizeKey($detail) === $this->normalizeKey($label)) {
+            return null;
+        }
+
+        return mb_strimwidth($detail, 0, 60, '…');
     }
 
     private function stripReferenceNoise(string $text): string
