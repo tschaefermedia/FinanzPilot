@@ -114,6 +114,19 @@ class RecurringDetectorTest extends TestCase
         $this->assertSame('RTL Deutschland', $suggestions[0]['description']);
     }
 
+    public function test_provides_a_detail_line_to_distinguish_same_counterparty(): void
+    {
+        foreach (['2026-01-05', '2026-02-05', '2026-03-05'] as $date) {
+            $this->tx($date, -9.99, 'PayPal Europe', 'Netflix Abo PP.1234');
+        }
+
+        $suggestions = (new RecurringDetector)->detect();
+
+        $this->assertSame('PayPal Europe', $suggestions[0]['description']);
+        $this->assertNotNull($suggestions[0]['detail']);
+        $this->assertStringContainsString('Netflix', $suggestions[0]['detail']);
+    }
+
     public function test_label_falls_back_to_cleaned_description_without_counterparty(): void
     {
         foreach (['2026-01-05', '2026-02-05', '2026-03-05'] as $date) {

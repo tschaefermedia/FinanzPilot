@@ -30,6 +30,19 @@ class BudgetController extends Controller
 
         $categories = Category::get(['id', 'name', 'icon', 'parent_id', 'budget_monthly']);
         $childrenMap = $categories->groupBy('parent_id');
+        $byId = $categories->keyBy('id');
+
+        // Full "Parent › Child" path so same-named nested categories are distinguishable.
+        $pathName = function ($category) use ($byId): string {
+            $parts = [$category->name];
+            $parent = $category->parent_id ? $byId->get($category->parent_id) : null;
+            while ($parent) {
+                array_unshift($parts, $parent->name);
+                $parent = $parent->parent_id ? $byId->get($parent->parent_id) : null;
+            }
+
+            return implode(' › ', $parts);
+        };
 
         // Spend for a category rolls up its whole subtree.
         $subtreeSpend = function (int $id) use (&$subtreeSpend, $spendByCategory, $childrenMap): float {
@@ -43,13 +56,13 @@ class BudgetController extends Controller
 
         $budgets = $categories
             ->filter(fn ($c) => $c->budget_monthly > 0)
-            ->map(function ($c) use ($subtreeSpend) {
+            ->map(function ($c) use ($subtreeSpend, $pathName) {
                 $budget = (float) $c->budget_monthly;
                 $spent = round($subtreeSpend($c->id), 2);
 
                 return [
                     'id' => $c->id,
-                    'name' => $c->name,
+                    'name' => $pathName($c),
                     'icon' => $c->icon,
                     'budget' => $budget,
                     'spent' => $spent,
@@ -70,7 +83,7 @@ class BudgetController extends Controller
             ],
             'unbudgeted' => $categories
                 ->filter(fn ($c) => ! ($c->budget_monthly > 0))
-                ->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])
+                ->map(fn ($c) => ['id' => $c->id, 'name' => $pathName($c)])
                 ->sortBy('name')
                 ->values(),
         ]);
