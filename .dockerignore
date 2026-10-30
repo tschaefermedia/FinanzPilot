@@ -5,6 +5,7 @@ mcp-server/node_modules
 .env
 .env.backup
 database/database.sqlite
+database.sqlite*
 storage/logs/*
 storage/framework/cache/*
 storage/framework/sessions/*

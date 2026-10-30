@@ -24,4 +24,5 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 database/database.sqlite
+/database.sqlite*
 mcp-server/node_modules/
