@@ -4,6 +4,8 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AiAnalysisController;
 use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AiInsightsController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\SetupController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CategoryAnalysisController;
@@ -18,74 +20,87 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\TrendController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', DashboardController::class)->name('dashboard');
+Route::middleware('guest')->group(function () {
+    Route::get('setup', [SetupController::class, 'create'])->name('setup');
+    Route::post('setup', [SetupController::class, 'store'])->name('setup.store');
+    Route::get('login', [LoginController::class, 'create'])->name('login');
+    Route::post('login', [LoginController::class, 'store'])->name('login.store');
+});
 
-// Accounts
-Route::resource('accounts', AccountController::class)->except(['show', 'create', 'edit']);
+Route::middleware('auth')->group(function () {
+    Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
 
-Route::post('transactions/bulk-update-account', [TransactionController::class, 'bulkUpdateAccount'])->name('transactions.bulkUpdateAccount');
-Route::resource('transactions', TransactionController::class);
-Route::get('categories/analysis', CategoryAnalysisController::class)->name('categories.analysis');
-Route::resource('categories', CategoryController::class)->except(['show']);
+    Route::get('/', DashboardController::class)->name('dashboard');
 
-// Import pipeline
-Route::get('imports', [ImportController::class, 'index'])->name('imports.index');
-Route::post('imports/upload', [ImportController::class, 'upload'])->name('imports.upload');
-Route::post('imports/parse-generic', [ImportController::class, 'parseGeneric'])->name('imports.parseGeneric');
-Route::post('imports/commit', [ImportController::class, 'commit'])->name('imports.commit');
+    // Accounts
+    Route::resource('accounts', AccountController::class)->except(['show', 'create', 'edit']);
 
-// Review queue
-Route::get('imports/review', [ImportController::class, 'review'])->name('imports.review');
-Route::put('imports/categorize/{transaction}', [ImportController::class, 'categorize'])->name('imports.categorize');
-Route::post('imports/bulk-categorize', [ImportController::class, 'bulkCategorize'])->name('imports.bulkCategorize');
+    Route::post('transactions/bulk-update-account', [TransactionController::class, 'bulkUpdateAccount'])->name('transactions.bulkUpdateAccount');
+    Route::resource('transactions', TransactionController::class);
 
-// Recurring templates
-Route::post('recurring/suggestions/dismiss', [RecurringTemplateController::class, 'dismissSuggestion'])->name('recurring.suggestions.dismiss');
-Route::resource('recurring', RecurringTemplateController::class)->except(['show', 'create', 'edit']);
-Route::post('recurring/{recurring}/generate', [RecurringTemplateController::class, 'generate'])->name('recurring.generate');
+    Route::get('categories/analysis', CategoryAnalysisController::class)->name('categories.analysis');
+    Route::resource('categories', CategoryController::class)->except(['show']);
 
-// Loans
-Route::resource('loans', LoanController::class)->except(['create', 'edit']);
-Route::post('loans/{loan}/payments', [LoanController::class, 'addPayment'])->name('loans.addPayment');
-Route::post('loans/{loan}/auto-match', [LoanController::class, 'autoMatch'])->name('loans.autoMatch');
-Route::get('loans/{loan}/unmatched-transactions', [LoanController::class, 'unmatchedTransactions'])->name('loans.unmatchedTransactions');
-Route::post('loans/{loan}/match-transaction', [LoanController::class, 'matchTransaction'])->name('loans.matchTransaction');
+    // Import pipeline
+    Route::get('imports', [ImportController::class, 'index'])->name('imports.index');
+    Route::post('imports/upload', [ImportController::class, 'upload'])->name('imports.upload');
+    Route::post('imports/parse-generic', [ImportController::class, 'parseGeneric'])->name('imports.parseGeneric');
+    Route::post('imports/commit', [ImportController::class, 'commit'])->name('imports.commit');
 
-// Calendar
-Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
-Route::post('calendar/payments', [CalendarController::class, 'store'])->name('calendar.store');
-Route::put('calendar/payments/{scheduledPayment}', [CalendarController::class, 'update'])->name('calendar.update');
-Route::delete('calendar/payments/{scheduledPayment}', [CalendarController::class, 'destroy'])->name('calendar.destroy');
-Route::post('calendar/payments/{scheduledPayment}/complete', [CalendarController::class, 'complete'])->name('calendar.complete');
+    // Review queue
+    Route::get('imports/review', [ImportController::class, 'review'])->name('imports.review');
+    Route::put('imports/categorize/{transaction}', [ImportController::class, 'categorize'])->name('imports.categorize');
+    Route::post('imports/bulk-categorize', [ImportController::class, 'bulkCategorize'])->name('imports.bulkCategorize');
 
-// Budgets
-Route::get('budgets', BudgetController::class)->name('budgets.index');
-Route::put('budgets/{category}', [BudgetController::class, 'update'])->name('budgets.update');
+    // Recurring templates
+    Route::post('recurring/suggestions/dismiss', [RecurringTemplateController::class, 'dismissSuggestion'])->name('recurring.suggestions.dismiss');
+    Route::resource('recurring', RecurringTemplateController::class)->except(['show', 'create', 'edit']);
+    Route::post('recurring/{recurring}/generate', [RecurringTemplateController::class, 'generate'])->name('recurring.generate');
 
-// Trends
-Route::get('trends', TrendController::class)->name('trends');
+    // Loans
+    Route::resource('loans', LoanController::class)->except(['create', 'edit']);
+    Route::post('loans/{loan}/payments', [LoanController::class, 'addPayment'])->name('loans.addPayment');
+    Route::post('loans/{loan}/auto-match', [LoanController::class, 'autoMatch'])->name('loans.autoMatch');
+    Route::get('loans/{loan}/unmatched-transactions', [LoanController::class, 'unmatchedTransactions'])->name('loans.unmatchedTransactions');
+    Route::post('loans/{loan}/match-transaction', [LoanController::class, 'matchTransaction'])->name('loans.matchTransaction');
 
-// Export
-Route::get('export', [ExportController::class, 'index'])->name('export.index');
-Route::post('export/month', [ExportController::class, 'exportMonth'])->name('export.month');
-Route::post('export/range', [ExportController::class, 'exportRange'])->name('export.range');
-Route::post('export/batch', [ExportController::class, 'exportBatch'])->name('export.batch');
+    // Calendar
+    Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
+    Route::post('calendar/payments', [CalendarController::class, 'store'])->name('calendar.store');
+    Route::put('calendar/payments/{scheduledPayment}', [CalendarController::class, 'update'])->name('calendar.update');
+    Route::delete('calendar/payments/{scheduledPayment}', [CalendarController::class, 'destroy'])->name('calendar.destroy');
+    Route::post('calendar/payments/{scheduledPayment}/complete', [CalendarController::class, 'complete'])->name('calendar.complete');
 
-// Settings
-Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
-Route::put('settings/ai', [SettingsController::class, 'updateAi'])->name('settings.updateAi');
-Route::delete('settings/clear-all', [SettingsController::class, 'clearAll'])->name('settings.clearAll');
+    // Budgets
+    Route::get('budgets', BudgetController::class)->name('budgets.index');
+    Route::put('budgets/{category}', [BudgetController::class, 'update'])->name('budgets.update');
 
-// AI Analysis page
-Route::get('ai', [AiAnalysisController::class, 'index'])->name('ai.index');
-Route::get('api/ai/insights', [AiAnalysisController::class, 'insights'])->name('api.ai.insights');
-Route::post('api/ai/refresh', [AiAnalysisController::class, 'refresh'])->middleware('throttle:5,1')->name('api.ai.refresh');
+    // Trends
+    Route::get('trends', TrendController::class)->name('trends');
 
-// AI Chat
-Route::get('api/ai/chat/history', [AiChatController::class, 'history'])->name('api.ai.chat.history');
-Route::post('api/ai/chat/send', [AiChatController::class, 'send'])->middleware('throttle:20,10')->name('api.ai.chat.send');
-Route::post('api/ai/chat/clear', [AiChatController::class, 'clear'])->name('api.ai.chat.clear');
+    // Export
+    Route::get('export', [ExportController::class, 'index'])->name('export.index');
+    Route::post('export/month', [ExportController::class, 'exportMonth'])->name('export.month');
+    Route::post('export/range', [ExportController::class, 'exportRange'])->name('export.range');
+    Route::post('export/batch', [ExportController::class, 'exportBatch'])->name('export.batch');
 
-// AI Insights (JSON API for dashboard widget)
-Route::get('api/insights', [AiInsightsController::class, 'index'])->name('api.insights');
-Route::post('api/insights/refresh', [AiInsightsController::class, 'refresh'])->middleware('throttle:5,1')->name('api.insights.refresh');
+    // Settings
+    Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
+    Route::put('settings/ai', [SettingsController::class, 'updateAi'])->name('settings.updateAi');
+    Route::put('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.updatePassword');
+    Route::delete('settings/clear-all', [SettingsController::class, 'clearAll'])->name('settings.clearAll');
+
+    // AI Analysis page
+    Route::get('ai', [AiAnalysisController::class, 'index'])->name('ai.index');
+    Route::get('api/ai/insights', [AiAnalysisController::class, 'insights'])->name('api.ai.insights');
+    Route::post('api/ai/refresh', [AiAnalysisController::class, 'refresh'])->middleware('throttle:5,1')->name('api.ai.refresh');
+
+    // AI Chat
+    Route::get('api/ai/chat/history', [AiChatController::class, 'history'])->name('api.ai.chat.history');
+    Route::post('api/ai/chat/send', [AiChatController::class, 'send'])->middleware('throttle:20,10')->name('api.ai.chat.send');
+    Route::post('api/ai/chat/clear', [AiChatController::class, 'clear'])->name('api.ai.chat.clear');
+
+    // AI Insights (JSON API for dashboard widget)
+    Route::get('api/insights', [AiInsightsController::class, 'index'])->name('api.insights');
+    Route::post('api/insights/refresh', [AiInsightsController::class, 'refresh'])->middleware('throttle:5,1')->name('api.insights.refresh');
+});

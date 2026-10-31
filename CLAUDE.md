@@ -63,7 +63,7 @@ All in `routes/web.php` (~60 routes). RESTful resources for: dashboard, accounts
 
 ## Key Conventions
 
-- **Single-user app** — no authentication/authorization needed
+- **Single-user app** — one login account (created on the first-run setup screen), no authorization/roles
 - **German localization** — UI text, date formats, currency formatting are German
 - **Inertia.js pattern** — no JSON API controllers; data flows via Inertia props and form helpers
 - **Service layer** — complex business logic lives in Services, not controllers

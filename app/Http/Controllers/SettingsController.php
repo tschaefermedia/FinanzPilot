@@ -16,6 +16,7 @@ use App\Models\Transaction;
 use App\Services\AI\AiConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 
 class SettingsController extends Controller
@@ -51,6 +52,18 @@ class SettingsController extends Controller
         Setting::set('ai_base_url', $validated['ai_base_url'] ?? '');
 
         return redirect()->back()->with('success', 'KI-Einstellungen gespeichert.');
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $validated = $request->validate([
+            'current_password' => ['required', 'current_password'],
+            'password' => ['required', 'confirmed', Password::min(8)],
+        ]);
+
+        $request->user()->update(['password' => $validated['password']]);
+
+        return redirect()->back()->with('success', 'Passwort geändert.');
     }
 
     public function clearAll()

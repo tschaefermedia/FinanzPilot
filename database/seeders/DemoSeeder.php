@@ -11,7 +11,6 @@ use App\Models\LoanPayment;
 use App\Models\RecurringTemplate;
 use App\Models\Setting;
 use App\Models\Transaction;
-use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
@@ -29,11 +28,9 @@ class DemoSeeder extends Seeder
         Account::truncate();
         Category::truncate();
         Setting::truncate();
-        User::truncate();
 
         // Re-seed base data
         $this->call([
-            UserSeeder::class,
             CategorySeeder::class,
         ]);
 
