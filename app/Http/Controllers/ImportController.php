@@ -11,6 +11,7 @@ use App\Models\Transaction;
 use App\Services\Categorization\CategoryRuleEngine;
 use App\Services\Import\FormatDetector;
 use App\Services\Import\GenericCsvParser;
+use App\Services\Import\ParsedTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -93,12 +94,12 @@ class ImportController extends Controller
 
         $fullPath = Storage::path($request->file_path);
 
-        if (! str_starts_with(realpath($fullPath) ?: '', realpath(storage_path('app/imports')) ?: '')) {
-            abort(403, 'Ungültiger Dateipfad.');
-        }
-
         if (! file_exists($fullPath)) {
             return redirect()->route('imports.index')->with('error', 'Datei nicht gefunden.');
+        }
+
+        if (! $this->isInsideImportsDirectory($request->file_path)) {
+            abort(403, 'Ungültiger Dateipfad.');
         }
 
         // Save mapping if requested
@@ -136,8 +137,11 @@ class ImportController extends Controller
      */
     private function showPreview(array $parsed, string $filename, string $sourceType, string $storagePath)
     {
-        // Check for duplicates
-        $existingHashes = Transaction::whereIn('hash', array_map(fn ($p) => $p->hash, $parsed))
+        $parsed = ParsedTransaction::disambiguateHashes($parsed);
+
+        // Deleted transactions count as duplicates: the user removed them on purpose.
+        $existingHashes = Transaction::withTrashed()
+            ->whereIn('hash', array_map(fn ($p) => $p->hash, $parsed))
             ->pluck('hash')
             ->toArray();
 
@@ -208,13 +212,23 @@ class ImportController extends Controller
             'account_id' => 'nullable|exists:accounts,id',
         ]);
 
-        DB::transaction(function () use ($request) {
+        // Guards against double submits; the hash column is unique, including soft-deleted rows.
+        $existingHashes = Transaction::withTrashed()
+            ->whereIn('hash', array_filter(array_column($request->transactions, 'hash')))
+            ->pluck('hash')
+            ->flip();
+        $newTransactions = array_filter(
+            $request->transactions,
+            fn ($txData) => empty($txData['hash']) || ! $existingHashes->has($txData['hash']),
+        );
+
+        DB::transaction(function () use ($request, $newTransactions) {
             // Create import batch
             $batch = ImportBatch::create([
                 'filename' => $request->filename,
                 'source_type' => $request->source_type,
                 'uploaded_at' => now(),
-                'row_count' => count($request->transactions),
+                'row_count' => count($newTransactions),
                 'status' => 'committed',
             ]);
 
@@ -228,7 +242,7 @@ class ImportController extends Controller
             // Preload all rules once to avoid N+1 in learn()
             $allRules = CategoryRule::all();
 
-            foreach ($request->transactions as $txData) {
+            foreach ($newTransactions as $txData) {
                 $transaction = Transaction::create([
                     'date' => $txData['date'],
                     'amount' => $txData['amount'],
@@ -250,17 +264,12 @@ class ImportController extends Controller
             }
         });
 
-        // Clean up uploaded file (with path traversal guard)
-        if ($request->storage_path) {
-            $fullPath = Storage::path($request->storage_path);
-            $importsDir = realpath(storage_path('app/imports')) ?: storage_path('app/imports');
-            if (str_starts_with(realpath($fullPath) ?: '', $importsDir)) {
-                Storage::delete($request->storage_path);
-            }
+        if ($this->isInsideImportsDirectory($request->storage_path)) {
+            Storage::delete($request->storage_path);
         }
 
         return redirect()->route('imports.index')
-            ->with('success', count($request->transactions).' Buchungen importiert.');
+            ->with('success', count($newTransactions).' Buchungen importiert.');
     }
 
     /**
@@ -328,5 +337,18 @@ class ImportController extends Controller
         }
 
         return redirect()->back()->with('success', count($transactions).' Buchungen kategorisiert.');
+    }
+
+    /**
+     * Path traversal guard for client-supplied upload paths.
+     */
+    private function isInsideImportsDirectory(string $storagePath): bool
+    {
+        $importsDirectory = realpath(Storage::path('imports'));
+        $filePath = realpath(Storage::path($storagePath));
+
+        return $importsDirectory !== false
+            && $filePath !== false
+            && str_starts_with($filePath, $importsDirectory.DIRECTORY_SEPARATOR);
     }
 }
