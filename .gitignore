@@ -26,3 +26,4 @@ Thumbs.db
 database/database.sqlite
 /database.sqlite*
 mcp-server/node_modules/
+/data

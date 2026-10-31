@@ -1,4 +1,4 @@
-.PHONY: up down build rebuild shell migrate seed fresh tinker test lint
+.PHONY: up down build rebuild shell migrate seed fresh tinker backup test lint
 
 up:
 	docker compose up -d
@@ -13,22 +13,25 @@ rebuild:
 	docker compose build --no-cache
 
 shell:
-	docker compose exec php bash
+	docker compose exec app bash
 
 migrate:
-	docker compose exec php php artisan migrate
+	docker compose exec app php artisan migrate
 
 seed:
-	docker compose exec php php artisan db:seed
+	docker compose exec app php artisan db:seed
 
 fresh:
-	docker compose exec php php artisan migrate:fresh --seed
+	docker compose exec app php artisan migrate:fresh --seed
 
 tinker:
-	docker compose exec php php artisan tinker
+	docker compose exec app php artisan tinker
+
+backup:
+	docker compose exec app php artisan backup:database
 
 test:
-	docker compose exec php php artisan test
+	php artisan test
 
 lint:
-	docker compose exec php vendor/bin/pint --test
+	vendor/bin/pint --test

@@ -1,0 +1,2 @@
+#!/command/with-contenv sh
+exec php /var/www/html/artisan schedule:work --run-output-file=/data/storage/logs/scheduler.log

@@ -14,15 +14,16 @@ npm run dev              # Vite dev server only (HMR on :5173)
 npm run build            # Production frontend build
 
 make lint                # PHP code style check (Laravel Pint, PSR-12)
-make fresh               # Drop all tables and re-migrate
-make seed                # Run seeders
 ```
 
 Docker:
 ```bash
-make up / down / build / rebuild    # Docker management
+make up / down / build / rebuild    # Docker management (single `app` container, data in ./data)
+make migrate / seed / fresh / backup  # Artisan commands inside the container
 docker compose -f docker-compose.prod.yml up -d  # Production (pre-built image)
 ```
+
+The image (`docker/Dockerfile`) is based on serversideup/php fpm-nginx. `docker/entrypoint.d/` runs on start (APP_KEY, migrations, seeding, caches); `docker/s6/scheduler` runs `schedule:work`.
 
 ## Architecture
 
@@ -51,7 +52,7 @@ docker compose -f docker-compose.prod.yml up -d  # Production (pre-built image)
 
 ### Database
 
-SQLite single file (`database.sqlite`). No external DB required. Tests use in-memory SQLite.
+SQLite single file (`database/database.sqlite` locally, `/data/database.sqlite` in Docker). No external DB required. `backup:database` writes daily `VACUUM INTO` copies to the `backups` disk. Tests use in-memory SQLite.
 
 ### MCP Server
 

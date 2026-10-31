@@ -1,283 +1,181 @@
 # FinanzPilot — Deployment Guide
 
+FinanzPilot runs as a single Docker container (nginx, PHP-FPM and the scheduler). Everything you need to keep lives in one folder, `./data`, next to the compose file.
+
 ## Prerequisites
 
-- Docker & Docker Compose installed on the host (Proxmox LXC, VM, or bare metal)
-- (Optional) Cloudflare Tunnel or reverse proxy for HTTPS
+- Docker with Docker Compose
+- (Optional) A reverse proxy or tunnel for HTTPS (Caddy, Traefik, nginx, Cloudflare Tunnel, …)
 
 ---
 
-## Option A: Deploy with Pre-built Image (Recommended)
-
-The fastest way to deploy. Uses the pre-built image from GitHub Container Registry — no build step needed. The repository includes a ready-to-use `docker-compose.prod.yml`.
-
-### 1. Clone (or download) the repository
+## Quick Start (pre-built image)
 
 ```bash
 git clone https://github.com/tschaefermedia/FinanzPilot.git
-cd financial-pilot
-```
+cd FinanzPilot
 
-### 2. Set your APP_KEY (recommended)
+# The container runs as uid 33 (www-data) and needs to own the data folder
+mkdir data && sudo chown 33:33 data
 
-> **Important:** The entrypoint auto-generates an `APP_KEY` on first start, but it only persists inside the Docker volume. If the volume is ever pruned, sessions and encrypted data become unreadable. For production, set it explicitly:
-
-```bash
-# Generate a key
-php -r "echo 'base64:'.base64_encode(random_bytes(32)).PHP_EOL;"
-
-# Add it to docker-compose.prod.yml under php → environment:
-#   - APP_KEY=base64:your-generated-key
-```
-
-### 3. Start
-
-```bash
-touch database.sqlite
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-On first start, the entrypoint automatically:
-- Creates `.env` from defaults
-- Generates the application key (if not set via environment)
-- Runs database migrations and seeds categories
-- Sets all file permissions
+Open `http://<your-server-ip>` and create your account on the setup screen.
 
-The app is now running at `http://<your-server-ip>`.
+On every start the container:
+- generates an `APP_KEY` into `data/.env` (first start only, unless you set `APP_KEY` yourself)
+- runs database migrations and seeds the default categories into an empty database
+- starts the scheduler (recurring transactions, upload cleanup, daily backups)
 
-### Updating to a new version
+### Updating
 
 ```bash
+git pull   # picks up changes to the compose file
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-Migrations run automatically on container start — no manual steps needed.
+## Build from Source
+
+`docker-compose.yml` builds the same image locally:
+
+```bash
+mkdir -p data && sudo chown 33:33 data
+docker compose up -d --build
+```
+
+For development without Docker use `composer run dev`.
 
 ---
 
-## Option B: Build from Source
+## The data folder
 
-Clone the repo and build the Docker image locally.
+| Path                    | Content                                               |
+| ----------------------- | ----------------------------------------------------- |
+| `data/database.sqlite`  | All your data (plus `-wal`/`-shm` files while running) |
+| `data/.env`             | Generated `APP_KEY`, optional overrides               |
+| `data/backups/`         | Automatic daily backups                               |
+| `data/storage/`         | Logs, sessions, cache, temporary uploads              |
 
-```bash
-# 1. Clone the repository
-git clone https://github.com/tschaefermedia/FinanzPilot.git
-cd financial-pilot
+> **Keep `data/.env` with your backups.** The `APP_KEY` in it decrypts the AI API key stored in the settings. Without it you only have to re-enter the API key; your financial data is not encrypted with it.
 
-# 2. Configure environment
-cp .env.example .env
-nano .env  # See "Environment Configuration" below
+## HTTPS / Reverse Proxy
 
-# 3. Build and start (frontend assets are built automatically via multi-stage Docker build)
-docker compose build
-docker compose up -d
-
-# 4. Install PHP dependencies
-docker compose exec php composer install --no-dev --optimize-autoloader
-
-# 5. Generate application key
-docker compose exec php php artisan key:generate
-
-# 6. Run database migrations and seed categories
-docker compose exec php php artisan migrate --force
-docker compose exec php php artisan db:seed --force
-```
-
-### Updating from source
-
-```bash
-git pull
-docker compose build
-docker compose up -d
-docker compose exec php composer install --no-dev --optimize-autoloader
-docker compose exec php php artisan migrate --force
-```
-
----
-
-## Environment Variables Reference
-
-All variables can be set via Docker Compose `environment:`, a bind-mounted `.env` file, or the auto-generated `.env` inside the container.
-
-### Application
-
-| Variable     | Default            | Description                                             |
-| ------------ | ------------------ | ------------------------------------------------------- |
-| `APP_NAME`   | `FinanzPilot`      | Application name (shown in browser tab)                 |
-| `APP_ENV`    | `production`       | Environment: `production` or `local`                    |
-| `APP_KEY`    | *(auto-generated)* | Encryption key — see below |
-| `APP_DEBUG`  | `false`            | Set `true` for detailed error pages (development only)  |
-| `APP_URL`    | `http://localhost` | Public URL (used in exports, links)                     |
-| `APP_LOCALE` | `de`               | Application locale                                      |
-
-#### APP_KEY
-
-The app key is used for encryption (sessions, cookies). It is auto-generated on first container start. You can also set it explicitly in your `docker-compose.yml`:
+The container listens on port 8080 (published as port 80 by the compose files). Behind a TLS-terminating proxy or tunnel, point it at `http://<host>:80` and set the public URL:
 
 ```yaml
 environment:
-  - APP_KEY=base64:your-key-here
+  - APP_URL=https://finanzen.example.com
+  - SESSION_SECURE_COOKIE=true
 ```
 
-To generate a key manually:
+All generated links and asset URLs use `https://` when `APP_URL` starts with `https://`.
+
+## Environment Variables
+
+Set them under `environment:` in the compose file or in `data/.env`. Environment variables take precedence over `data/.env`.
+
+| Variable                | Default            | Description                                                 |
+| ----------------------- | ------------------ | ----------------------------------------------------------- |
+| `APP_URL`               | `http://localhost` | Public URL, see [HTTPS](#https--reverse-proxy)               |
+| `APP_KEY`               | *(generated)*      | Encryption key, generated into `data/.env` if not set        |
+| `APP_DEBUG`             | `false`            | Detailed error pages, never enable on a public instance      |
+| `SESSION_LIFETIME`      | `120`              | Minutes until an inactive session expires ("Angemeldet bleiben" keeps you logged in) |
+| `SESSION_SECURE_COOKIE` | *(unset)*          | Set `true` when the app is only reached via HTTPS            |
+| `LOG_LEVEL`             | `error`            | `debug`, `info`, `warning`, `error`                          |
+
+AI providers (Claude, OpenAI, Ollama) are configured on the **Einstellungen** page, not via environment variables.
+
+---
+
+## Account
+
+The first visit shows a setup screen to create the single login account. To reset a forgotten password:
 
 ```bash
-# Using PHP
-php -r "echo 'base64:'.base64_encode(random_bytes(32)).PHP_EOL;"
-
-# Using OpenSSL
-echo "base64:$(openssl rand -base64 32)"
-
-# From a running container
-docker compose exec php php artisan key:generate --show
+docker compose -f docker-compose.prod.yml exec app php artisan user:reset-password
 ```
-
-Copy the output (e.g., `base64:RXxCXlba...`) and add it to `environment:` in your `docker-compose.yml`. Recommended for production — ensures the key persists across container recreations.
-
-### Database
-
-| Variable        | Default  | Description                                  |
-| --------------- | -------- | -------------------------------------------- |
-| `DB_CONNECTION` | `sqlite` | Database driver (only `sqlite` is supported) |
-
-### Session & Cache
-
-| Variable           | Default | Description                                |
-| ------------------ | ------- | ------------------------------------------ |
-| `SESSION_DRIVER`   | `file`  | Session storage: `file`, `cookie`, `array` |
-| `SESSION_LIFETIME` | `120`   | Session timeout in minutes                 |
-| `CACHE_STORE`      | `file`  | Cache backend: `file`, `array`             |
-| `QUEUE_CONNECTION` | `sync`  | Queue driver: `sync` (recommended)         |
-
-### Logging
-
-| Variable      | Default  | Description                                            |
-| ------------- | -------- | ------------------------------------------------------ |
-| `LOG_CHANNEL` | `stack`  | Log channel                                            |
-| `LOG_STACK`   | `single` | Stack channels                                         |
-| `LOG_LEVEL`   | `error`  | Minimum log level: `debug`, `info`, `warning`, `error` |
-
-### AI Configuration
-
-AI provider settings are managed through the **Settings** page in the app and stored in the database — not in `.env`. Supported providers:
-- **Claude** (Anthropic API)
-- **OpenAI** / OpenAI-compatible APIs
-- **Ollama** (local, fully offline)
-
----
-
-## Docker Architecture
-
-```
-┌─────────────────────────────────────┐
-│  Docker Compose                     │
-│                                     │
-│  ┌───────────┐   ┌───────────────┐  │
-│  │   nginx   │   │     php       │  │
-│  │  :80      │ → │    :9000      │  │
-│  │  (proxy)  │   │  (fpm +       │  │
-│  └───────────┘   │  built assets)│  │
-│                  └───────────────┘  │
-│                        │            │
-│            database/database.sqlite │
-└─────────────────────────────────────┘
-```
-
-| Service | Image                              | Purpose                                 |
-| ------- | ---------------------------------- | --------------------------------------- |
-| nginx   | nginx:alpine                       | Reverse proxy, serves static files      |
-| php     | ghcr.io/tschaefermedia/finanzpilot | Laravel app + pre-built frontend assets |
-
----
-
-## Make Commands
-
-When using Option B (build from source):
-
-```bash
-make up          # Start all containers
-make down        # Stop all containers
-make build       # Rebuild containers
-make rebuild     # Rebuild containers without cache
-make shell       # Open a bash shell in the PHP container
-make migrate     # Run database migrations
-make seed        # Run database seeders
-make fresh       # Drop all tables, re-migrate, and re-seed
-make tinker      # Open Laravel Tinker REPL
-```
-
----
 
 ## Backup & Restore
 
-FinanzPilot uses a single SQLite file. Backup is a file copy.
-
-### Backup
+A consistent copy of the database is written to `data/backups/` every day at 02:00 (UTC). The newest 14 copies are kept. To create one manually:
 
 ```bash
-# Option A (pre-built image)
-docker compose exec php cp database/database.sqlite /var/www/html/storage/app/backup.sqlite
-docker compose cp php:/var/www/html/storage/app/backup.sqlite ./finanzpilot-backup.sqlite
-
-# Option B (from source)
-cp database/database.sqlite /path/to/backup/finanzpilot-$(date +%Y%m%d).sqlite
+docker compose -f docker-compose.prod.yml exec app php artisan backup:database
 ```
+
+For off-site backups, copy the whole `data/` folder (or at least `data/backups/` and `data/.env`) with your usual backup tool.
 
 ### Restore
 
 ```bash
-# Stop the app
-docker compose down
-
-# Option A: copy backup into volume
-docker compose up -d
-docker compose cp finanzpilot-backup.sqlite php:/var/www/html/database/database.sqlite
-docker compose exec php chown www-data:www-data database/database.sqlite
-docker compose restart
-
-# Option B: direct file replacement
-cp /path/to/backup/finanzpilot-20260403.sqlite database/database.sqlite
-docker compose up -d
+docker compose -f docker-compose.prod.yml down
+cp data/backups/finanzpilot-2026-10-30-020000.sqlite data/database.sqlite
+rm -f data/database.sqlite-wal data/database.sqlite-shm
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-### Automated Backup (Cron)
+---
 
-```cron
-# Daily backup at 2 AM (Option B)
-0 2 * * * cp /path/to/financial-pilot/database/database.sqlite /path/to/backups/finanzpilot-$(date +\%Y\%m\%d).sqlite
+## Upgrading from the two-container setup (nginx + php)
 
-# Keep only last 30 days
-0 3 * * * find /path/to/backups/ -name "finanzpilot-*.sqlite" -mtime +30 -delete
+Earlier versions kept the database in `./database.sqlite`, the generated `APP_KEY` inside the `app-data` Docker volume, and required a running nginx container. Run these steps in the folder that contains your `docker-compose.prod.yml`, **before** `git pull`:
+
+```bash
+# 1. Stop the old containers
+docker compose -f docker-compose.prod.yml down
+
+# 2. Move the database into the data folder (keep a copy until everything works)
+cp database.sqlite database.sqlite.bak
+mkdir data
+mv database.sqlite data/database.sqlite
+
+# 3. Carry over the APP_KEY from the old volume (skip if you set APP_KEY in the compose file;
+#    then keep that APP_KEY in the new compose file instead). Find the volume with `docker volume ls`.
+docker run --rm -v finanzpilot_app-data:/old alpine grep '^APP_KEY=' /old/.env > data/.env
+
+# 4. Hand the folder to the container user
+sudo chown -R 33:33 data
+
+# 5. Update and start
+git pull
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d --remove-orphans
 ```
+
+Then:
+- If you reach FinanzPilot via HTTPS, set `APP_URL=https://…` (see [HTTPS](#https--reverse-proxy)). The app no longer forces `https://` on its own.
+- The app now requires a login. If you never changed the old default account, it has been removed and you get the setup screen.
+- The container now listens on port 8080. The compose file still publishes it on host port 80, so reverse proxies pointing at port 80 keep working.
+- Once everything works, remove the old volume (`docker volume rm finanzpilot_app-data`) and `database.sqlite.bak`.
 
 ---
 
 ## MCP Server
 
-The MCP server runs as a separate Node.js process and connects directly to the SQLite database.
-
-### Install dependencies
+The MCP server is a separate Node.js process on the host that reads and writes the SQLite file directly. It needs write access to the `data/` folder.
 
 ```bash
 cd mcp-server
 npm install
 ```
 
-### Configure in Claude Code
-
-The project includes a `.mcp.json` file. If using from a different location, add to your Claude Code MCP settings:
+Add it to your Claude Code / Claude Desktop MCP settings:
 
 ```json
 {
   "mcpServers": {
     "finanzpilot": {
       "command": "node",
-      "args": ["/path/to/financial-pilot/mcp-server/index.js"]
+      "args": ["/path/to/FinanzPilot/mcp-server/index.js"],
+      "env": { "FINANZPILOT_DB_PATH": "/path/to/FinanzPilot/data/database.sqlite" }
     }
   }
 }
 ```
+
+Without `FINANZPILOT_DB_PATH` it uses `database/database.sqlite` (local development).
 
 ### Available MCP Resources
 
@@ -301,48 +199,22 @@ The project includes a `.mcp.json` file. If using from a different location, add
 
 ---
 
-## Recurring Transactions Scheduler
-
-The Laravel scheduler runs automatically inside the container — no host-level cron needed. The entrypoint installs a cron job that runs `php artisan schedule:run` every minute, which triggers `recurring:generate` daily to create transactions from active recurring templates.
-
-Scheduler output is logged to `storage/logs/scheduler.log` inside the container:
-
-```bash
-docker compose exec php tail -50 storage/logs/scheduler.log
-```
-
----
-
 ## Troubleshooting
 
-### App shows blank page
+### Container stops right after start with "/data is not writable"
 ```bash
-# Check Laravel logs
-docker compose exec php tail -50 storage/logs/laravel.log
-
-# Ensure storage permissions (handled automatically by entrypoint, but just in case)
-docker compose exec php chown -R www-data:www-data storage bootstrap/cache
+sudo chown -R 33:33 data
 ```
 
-### Database locked errors
+### Logs
 ```bash
-# Verify WAL mode is active
-docker compose exec php php artisan tinker --execute="DB::select('PRAGMA journal_mode')"
-# Should return: wal
+docker compose -f docker-compose.prod.yml logs app      # web server, startup
+tail -50 data/storage/logs/laravel.log                  # application errors
+tail -50 data/storage/logs/scheduler.log                # scheduled tasks
 ```
 
-### Assets not loading
-```bash
-# Verify manifest exists
-docker compose exec php ls -la public/build/manifest.json
-
-# If missing, restart the PHP container (entrypoint copies assets)
-docker compose restart php
-```
+### Page loads without styles behind HTTPS
+`APP_URL` is still `http://…`. Set it to your `https://` URL and restart.
 
 ### Port conflict
-Change the nginx port in `docker-compose.yml`:
-```yaml
-ports:
-  - "8080:80"
-```
+Change the published port in the compose file, e.g. `"8081:8080"`.

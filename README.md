@@ -45,32 +45,26 @@ Self-hosted personal finance web application. Track income, expenses, bank impor
 - **Frontend:** Vue 3 + Inertia.js + PrimeVue + Tailwind CSS
 - **Database:** SQLite (single-file backup)
 - **Charts:** ApexCharts
-- **Deployment:** Docker Compose (nginx + PHP-FPM)
+- **Deployment:** Single Docker container (nginx + PHP-FPM + scheduler)
 
 ## Quick Start
 
 ```bash
 git clone https://github.com/tschaefermedia/FinanzPilot.git
 cd FinanzPilot
-cp .env.example .env
-docker compose build
-docker compose up -d
-docker compose exec php composer install --no-dev --optimize-autoloader
-docker compose exec php php artisan key:generate
-docker compose exec php php artisan migrate --force
-docker compose exec php php artisan db:seed --force
+mkdir data && sudo chown 33:33 data
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-Open `http://localhost` in your browser.
+Open `http://localhost` in your browser and create your account.
 
 ## Documentation
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for the full deployment guide including:
-- Environment configuration
+- HTTPS / reverse proxy and environment configuration
 - Backup & restore
+- Upgrading from the old two-container setup
 - MCP server setup
-- Recurring transaction scheduler
-- Updating
 
 ## AI Configuration
 
