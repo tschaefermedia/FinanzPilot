@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\DateOnly;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,7 @@ class LoanPayment extends Model
 {
     protected function casts(): array
     {
-        return ['date' => 'date', 'amount' => 'decimal:2'];
+        return ['date' => DateOnly::class, 'amount' => 'decimal:2'];
     }
 
     public function loan(): BelongsTo

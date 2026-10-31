@@ -155,7 +155,7 @@ class AmortizationService
         $query = Transaction::where('amount', '<', 0)
             ->whereRaw('ABS(amount) BETWEEN CAST(? AS REAL) AND CAST(? AS REAL)', [$monthlyAmount * 0.95, $monthlyAmount * 1.05])
             ->whereDoesntHave('loanPayment')
-            ->where('date', '>=', $loan->start_date);
+            ->where('date', '>=', $loan->start_date->toDateString());
 
         if ($loan->account_id) {
             $query->where('account_id', $loan->account_id);
