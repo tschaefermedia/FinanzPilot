@@ -25,7 +25,7 @@ class CategoryControllerTest extends TestCase
     public function test_index_exposes_monthly_average(): void
     {
         $category = Category::create(['name' => 'Wohnen', 'type' => 'expense']);
-        Transaction::create(['date' => now()->subMonth()->startOfMonth()->format('Y-m-d'), 'amount' => -100, 'description' => 'a', 'category_id' => $category->id]);
+        Transaction::create(['date' => now()->subMonthNoOverflow()->startOfMonth()->format('Y-m-d'), 'amount' => -100, 'description' => 'a', 'category_id' => $category->id]);
         Transaction::create(['date' => now()->startOfMonth()->format('Y-m-d'), 'amount' => -200, 'description' => 'b', 'category_id' => $category->id]);
 
         // 300 total over 2 months (last month + this month) = 150.
