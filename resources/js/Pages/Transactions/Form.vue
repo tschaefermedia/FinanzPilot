@@ -9,7 +9,7 @@ const { formatDateForSubmit } = useFormatters();
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import DatePicker from 'primevue/datepicker';
-import TreeSelect from 'primevue/treeselect';
+import CategoryTreeSelect from '@/Components/CategoryTreeSelect.vue';
 import Textarea from 'primevue/textarea';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
@@ -99,7 +99,7 @@ function submit() {
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Kategorie</label>
-                    <TreeSelect v-model="selectedCategory" :options="categories" placeholder="Kategorie wählen" class="w-full" selectionMode="single" filter filterPlaceholder="Suchen..." />
+                    <CategoryTreeSelect v-model="selectedCategory" :options="categories" placeholder="Kategorie wählen" class="w-full" />
                 </div>
 
                 <div>

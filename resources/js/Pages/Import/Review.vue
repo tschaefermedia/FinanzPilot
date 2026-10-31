@@ -8,7 +8,7 @@ import { ref, computed } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
-import TreeSelect from 'primevue/treeselect';
+import CategoryTreeSelect from '@/Components/CategoryTreeSelect.vue';
 import Checkbox from 'primevue/checkbox';
 
 const { formatCurrency, formatDate } = useFormatters();
@@ -72,14 +72,11 @@ function isSelected(id) {
         <!-- Bulk actions -->
         <div v-if="selectedIds.length > 0" class="bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700 p-4 mb-4 flex items-center gap-4">
             <span class="text-sm font-medium text-blue-700 dark:text-blue-400">{{ selectedIds.length }} ausgewählt</span>
-            <TreeSelect
+            <CategoryTreeSelect
                 v-model="bulkCategorySelection"
                 :options="categories"
                 placeholder="Kategorie wählen"
                 class="w-64"
-                selectionMode="single"
-                filter
-                filterPlaceholder="Suchen..."
             />
             <Button label="Zuweisen" size="small" @click="bulkCategorize" :disabled="!bulkCategorySelection" />
         </div>
@@ -109,16 +106,13 @@ function isSelected(id) {
                 <Column field="counterparty" header="Empfänger" style="width: 180px" headerClass="hidden md:table-cell" bodyClass="hidden md:table-cell" />
                 <Column header="Kategorie" style="width: 220px">
                     <template #body="{ data }">
-                        <TreeSelect
+                        <CategoryTreeSelect
                             :key="data.id"
                             :modelValue="null"
                             @update:modelValue="(val) => categorize(data.id, val)"
                             :options="categories"
                             placeholder="Kategorie wählen"
                             class="w-full"
-                            selectionMode="single"
-                            filter
-                            filterPlaceholder="Suchen..."
                         />
                     </template>
                 </Column>

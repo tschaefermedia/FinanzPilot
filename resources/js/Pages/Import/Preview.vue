@@ -8,7 +8,7 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
-import TreeSelect from 'primevue/treeselect';
+import CategoryTreeSelect from '@/Components/CategoryTreeSelect.vue';
 import Checkbox from 'primevue/checkbox';
 import Select from 'primevue/select';
 
@@ -158,15 +158,12 @@ function commitImport() {
                 <Column field="counterparty" header="Empfänger" style="min-width: 150px" headerClass="hidden md:table-cell" bodyClass="hidden md:table-cell" />
                 <Column header="Kategorie" style="width: 200px">
                     <template #body="{ data, index }">
-                        <TreeSelect
+                        <CategoryTreeSelect
                             :modelValue="getCategorySelection(index)"
                             @update:modelValue="(val) => setCategory(index, val)"
                             :options="categories"
                             placeholder="—"
                             class="w-full text-xs"
-                            selectionMode="single"
-                            filter
-                            filterPlaceholder="Suchen..."
                         />
                     </template>
                 </Column>
