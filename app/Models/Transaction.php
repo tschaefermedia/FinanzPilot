@@ -40,4 +40,17 @@ class Transaction extends Model
     {
         return $this->belongsTo(Account::class);
     }
+
+    /**
+     * The opposite leg of a transfer between two accounts. Both legs point at each other.
+     */
+    public function transferCounterpart(): BelongsTo
+    {
+        return $this->belongsTo(Transaction::class, 'transfer_transaction_id');
+    }
+
+    public function isTransferLeg(): bool
+    {
+        return $this->transfer_transaction_id !== null;
+    }
 }

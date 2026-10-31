@@ -17,6 +17,7 @@ use App\Http\Controllers\LoanController;
 use App\Http\Controllers\RecurringTemplateController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\TransferController;
 use App\Http\Controllers\TrendController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,6 +39,11 @@ Route::middleware('auth')->group(function () {
     Route::post('transactions/bulk-update-account', [TransactionController::class, 'bulkUpdateAccount'])->name('transactions.bulkUpdateAccount');
     Route::resource('transactions', TransactionController::class);
 
+    // Transfers between own accounts
+    Route::post('transfers', [TransferController::class, 'store'])->name('transfers.store');
+    Route::get('transactions/{transaction}/transfer-candidates', [TransferController::class, 'candidates'])->name('transfers.candidates');
+    Route::post('transactions/{transaction}/transfer-link', [TransferController::class, 'link'])->name('transfers.link');
+    Route::delete('transactions/{transaction}/transfer-link', [TransferController::class, 'unlink'])->name('transfers.unlink');
     Route::get('categories/analysis', CategoryAnalysisController::class)->name('categories.analysis');
     Route::resource('categories', CategoryController::class)->except(['show']);
 

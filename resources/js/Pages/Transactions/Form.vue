@@ -21,6 +21,7 @@ const props = defineProps({
 });
 
 const isEditing = computed(() => !!props.transaction);
+const isTransferLeg = computed(() => !!props.transaction?.transfer_counterpart);
 
 const form = useForm({
     date: props.transaction?.date ? new Date(props.transaction.date) : new Date(),
@@ -58,6 +59,12 @@ function submit() {
         <PageHeader :title="isEditing ? 'Buchung bearbeiten' : 'Neue Buchung'" backHref="/transactions" backLabel="Alle Buchungen" />
 
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6 max-w-2xl">
+            <div v-if="isTransferLeg" class="mb-5 rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 p-3 text-sm text-blue-700 dark:text-blue-300">
+                <i class="pi pi-arrow-right-arrow-left mr-1"></i>
+                Teil einer Umbuchung {{ transaction.amount < 0 ? 'an' : 'von' }} {{ transaction.transfer_counterpart.account?.name }}.
+                Betrag, Konto und Kategorie sind gesperrt, solange die Verknüpfung besteht.
+            </div>
+            <small v-if="form.errors.transfer" class="block mb-4 text-red-500">{{ form.errors.transfer }}</small>
             <form @submit.prevent="submit" class="space-y-5">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Datum</label>
@@ -75,12 +82,13 @@ function submit() {
                         placeholder="Konto wählen"
                         class="w-full"
                         showClear
+                        :disabled="isTransferLeg"
                     />
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Betrag</label>
-                    <InputNumber v-model="form.amount" mode="currency" currency="EUR" locale="de-DE" class="w-full" placeholder="0,00" />
+                    <InputNumber v-model="form.amount" mode="currency" currency="EUR" locale="de-DE" class="w-full" placeholder="0,00" :disabled="isTransferLeg" />
                     <small class="text-gray-400 dark:text-gray-500">Positiv = Einnahme, Negativ = Ausgabe</small>
                     <br v-if="form.errors.amount" />
                     <small v-if="form.errors.amount" class="text-red-500">{{ form.errors.amount }}</small>
@@ -99,7 +107,7 @@ function submit() {
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Kategorie</label>
-                    <CategoryTreeSelect v-model="selectedCategory" :options="categories" placeholder="Kategorie wählen" class="w-full" />
+                    <CategoryTreeSelect v-model="selectedCategory" :options="categories" placeholder="Kategorie wählen" class="w-full" :disabled="isTransferLeg" />
                 </div>
 
                 <div>
