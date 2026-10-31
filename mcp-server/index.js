@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.resolve(__dirname, '..', 'database', 'database.sqlite');
+const DB_PATH = process.env.FINANZPILOT_DB_PATH || path.resolve(__dirname, '..', 'database', 'database.sqlite');
 
 let db;
 function getDb() {

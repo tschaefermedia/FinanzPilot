@@ -92,6 +92,18 @@ class CategoryAnalysisControllerTest extends TestCase
         );
     }
 
+    public function test_selected_month_includes_its_last_day_on_the_31st(): void
+    {
+        $this->travelTo('2026-10-31 12:00:00');
+        $category = Category::create(['name' => 'Wohnen', 'type' => 'expense']);
+        Transaction::create(['date' => '2026-09-30', 'amount' => -800, 'description' => 'Miete', 'category_id' => $category->id]);
+
+        $this->get('/categories/analysis?month=2026-09')->assertInertia(fn ($page) => $page
+            ->where('selectedMonth', '2026-09')
+            ->where('hierarchy.0.expense', 800)
+        );
+    }
+
     public function test_month_filter(): void
     {
         $category = Category::create(['name' => 'Test', 'type' => 'expense']);

@@ -17,7 +17,7 @@ class BudgetController extends Controller
             $month = now()->format('Y-m');
         }
 
-        $start = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        $start = Carbon::createFromFormat('!Y-m', $month)->startOfMonth();
         $end = $start->copy()->endOfMonth();
 
         // Expense total per category for the month (positive numbers).

@@ -26,7 +26,7 @@ class CategoryController extends Controller
         $firstMonth = Transaction::selectRaw("strftime('%Y-%m', MIN(date)) as m")->value('m');
         $monthsElapsed = 1;
         if ($firstMonth) {
-            $monthsElapsed = Carbon::createFromFormat('Y-m', $firstMonth)->startOfMonth()->diffInMonths($now->copy()->startOfMonth()) + 1;
+            $monthsElapsed = Carbon::createFromFormat('!Y-m', $firstMonth)->startOfMonth()->diffInMonths($now->copy()->startOfMonth()) + 1;
         }
 
         $totals = Transaction::select(

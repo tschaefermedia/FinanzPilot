@@ -109,6 +109,94 @@ function submitRecurring() {
     });
 }
 
+// Transfers between own accounts
+const showTransferDialog = ref(false);
+const transferSubmitting = ref(false);
+const transferErrors = ref({});
+const transferForm = ref({});
+
+function openTransferDialog() {
+    transferForm.value = {
+        from_account_id: null,
+        to_account_id: null,
+        amount: null,
+        date: new Date(),
+        description: '',
+    };
+    transferErrors.value = {};
+    showTransferDialog.value = true;
+}
+
+function submitTransfer() {
+    transferSubmitting.value = true;
+    router.post('/transfers', {
+        ...transferForm.value,
+        date: formatDateForSubmit(transferForm.value.date),
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            showTransferDialog.value = false;
+        },
+        onError: (errors) => {
+            transferErrors.value = errors;
+        },
+        onFinish: () => {
+            transferSubmitting.value = false;
+        },
+    });
+}
+
+const showLinkDialog = ref(false);
+const linkSource = ref(null);
+const linkCandidates = ref([]);
+const linkCandidatesLoading = ref(false);
+
+function showErrorToast(errors) {
+    const message = errors.transfer || errors.transaction_ids;
+    if (message) {
+        toast.add({ severity: 'error', summary: 'Fehler', detail: message, life: 5000 });
+    }
+}
+
+async function openLinkDialog(transaction) {
+    linkSource.value = transaction;
+    linkCandidates.value = [];
+    showLinkDialog.value = true;
+    linkCandidatesLoading.value = true;
+    try {
+        const response = await fetch(`/transactions/${transaction.id}/transfer-candidates`, {
+            headers: { Accept: 'application/json' },
+        });
+        linkCandidates.value = await response.json();
+    } finally {
+        linkCandidatesLoading.value = false;
+    }
+}
+
+function linkTransfer(counterpartId) {
+    router.post(`/transactions/${linkSource.value.id}/transfer-link`, { counterpart_id: counterpartId }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            showLinkDialog.value = false;
+        },
+        onError: showErrorToast,
+    });
+}
+
+function unlinkTransfer(transaction) {
+    confirm.require({
+        message: 'Verknüpfung lösen? Beide Buchungen verlieren die Übertragungs-Kategorie und zählen wieder als Einnahme bzw. Ausgabe.',
+        header: 'Umbuchung lösen',
+        icon: 'pi pi-arrow-right-arrow-left',
+        acceptLabel: 'Lösen',
+        rejectLabel: 'Abbrechen',
+        accept: () => router.delete(`/transactions/${transaction.id}/transfer-link`, {
+            preserveScroll: true,
+            onError: showErrorToast,
+        }),
+    });
+}
+
 function buildParams(overrides = {}) {
     return {
         search: search.value || undefined,
@@ -170,6 +258,7 @@ function bulkUpdateAccount() {
             selectedIds.value = [];
             bulkAccountId.value = null;
         },
+        onError: showErrorToast,
     });
 }
 
@@ -189,6 +278,7 @@ function deleteTransaction(id) {
 <template>
     <AppLayout>
         <PageHeader title="Buchungen">
+            <Button v-if="accounts.length >= 2" label="Umbuchung" icon="pi pi-arrow-right-arrow-left" size="small" severity="secondary" class="mr-2" @click="openTransferDialog" />
             <Link href="/transactions/create">
                 <Button label="Neue Buchung" icon="pi pi-plus" size="small" />
             </Link>
@@ -277,6 +367,10 @@ function deleteTransaction(id) {
                     <template #body="{ data }">
                         <Tag v-if="data.category" :value="data.category.name" severity="info" />
                         <span v-else class="text-gray-400 dark:text-gray-500 text-xs">—</span>
+                        <div v-if="data.transfer_counterpart" class="text-xs text-gray-500 dark:text-gray-400 mt-1 whitespace-nowrap" :title="`Umbuchung mit ${data.transfer_counterpart.account?.name ?? 'Konto'}`">
+                            <i class="pi pi-arrow-right-arrow-left text-[10px]"></i>
+                            {{ data.amount < 0 ? 'an' : 'von' }} {{ data.transfer_counterpart.account?.name }}
+                        </div>
                     </template>
                 </Column>
                 <Column field="source" header="Quelle" style="width: 120px" headerClass="hidden lg:table-cell" bodyClass="hidden lg:table-cell">
@@ -290,9 +384,11 @@ function deleteTransaction(id) {
                         <span v-else class="text-gray-300 dark:text-gray-500 text-xs">—</span>
                     </template>
                 </Column>
-                <Column style="width: 90px">
+                <Column style="width: 130px">
                     <template #body="{ data }">
                         <div @click.stop class="flex gap-1">
+                            <Button v-if="data.transfer_counterpart" icon="pi pi-link" text rounded size="small" severity="info" title="Umbuchung lösen" @click="unlinkTransfer(data)" />
+                            <Button v-else-if="data.account" icon="pi pi-arrow-right-arrow-left" text rounded size="small" severity="secondary" title="Als Umbuchung verknüpfen" @click="openLinkDialog(data)" />
                             <Button icon="pi pi-replay" text rounded size="small" severity="secondary" title="Als Dauerauftrag erstellen" @click="openRecurringDialog(data)" />
                             <Button icon="pi pi-trash" text rounded size="small" severity="danger" @click="deleteTransaction(data.id)" />
                         </div>
@@ -305,6 +401,75 @@ function deleteTransaction(id) {
                 </Link>
             </EmptyState>
         </div>
+
+        <!-- Create Transfer Dialog -->
+        <Dialog v-model:visible="showTransferDialog" header="Umbuchung erstellen" modal :style="{ width: '450px' }">
+            <form @submit.prevent="submitTransfer" class="space-y-4">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Legt eine Abbuchung und eine Gutschrift an. Umbuchungen zählen nicht als Einnahme oder Ausgabe.</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Von Konto</label>
+                        <Select v-model="transferForm.from_account_id" :options="accounts" optionLabel="name" optionValue="id" placeholder="Konto wählen" class="w-full" />
+                        <small v-if="transferErrors.from_account_id" class="text-red-500">{{ transferErrors.from_account_id }}</small>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Auf Konto</label>
+                        <Select v-model="transferForm.to_account_id" :options="accounts" optionLabel="name" optionValue="id" placeholder="Konto wählen" class="w-full" />
+                        <small v-if="transferErrors.to_account_id" class="text-red-500">{{ transferErrors.to_account_id }}</small>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Betrag</label>
+                        <InputNumber v-model="transferForm.amount" class="w-full" mode="currency" currency="EUR" locale="de-DE" :min="0" />
+                        <small v-if="transferErrors.amount" class="text-red-500">{{ transferErrors.amount }}</small>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Datum</label>
+                        <DatePicker v-model="transferForm.date" dateFormat="dd.mm.yy" class="w-full" showIcon />
+                        <small v-if="transferErrors.date" class="text-red-500">{{ transferErrors.date }}</small>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Beschreibung</label>
+                    <InputText v-model="transferForm.description" class="w-full" placeholder="Umbuchung" />
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <Button label="Abbrechen" severity="secondary" size="small" @click="showTransferDialog = false" />
+                    <Button type="submit" label="Umbuchung erstellen" icon="pi pi-arrow-right-arrow-left" size="small" :loading="transferSubmitting" />
+                </div>
+            </form>
+        </Dialog>
+
+        <!-- Link Transfer Dialog -->
+        <Dialog v-model:visible="showLinkDialog" header="Als Umbuchung verknüpfen" modal :style="{ width: '600px' }">
+            <div v-if="linkSource" class="space-y-4">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Gegenbuchung zu <strong class="text-gray-700 dark:text-gray-200">{{ formatCurrency(linkSource.amount) }}</strong>
+                    am {{ formatDate(linkSource.date) }} ({{ linkSource.account?.name }}) wählen.
+                    Vorgeschlagen werden Buchungen mit genau entgegengesetztem Betrag auf anderen Konten, höchstens 5 Tage entfernt.
+                </p>
+                <div v-if="linkCandidatesLoading" class="py-8 text-center text-gray-400 text-sm"><i class="pi pi-spin pi-spinner"></i></div>
+                <div v-else-if="linkCandidates.length === 0" class="py-8 text-center text-gray-400 dark:text-gray-400 text-sm">Keine passende Gegenbuchung gefunden.</div>
+                <DataTable v-else :value="linkCandidates" class="text-sm">
+                    <Column header="Datum" style="width: 100px">
+                        <template #body="{ data }">{{ formatDate(data.date) }}</template>
+                    </Column>
+                    <Column header="Betrag" style="width: 110px">
+                        <template #body="{ data }">
+                            <span :class="data.amount >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'">{{ formatCurrency(data.amount) }}</span>
+                        </template>
+                    </Column>
+                    <Column field="description" header="Beschreibung" />
+                    <Column field="account" header="Konto" style="width: 110px" />
+                    <Column style="width: 60px">
+                        <template #body="{ data }">
+                            <Button icon="pi pi-link" text rounded size="small" title="Verknüpfen" @click="linkTransfer(data.id)" />
+                        </template>
+                    </Column>
+                </DataTable>
+            </div>
+        </Dialog>
 
         <!-- Create Recurring Template Dialog -->
         <Dialog v-model:visible="showRecurringDialog" header="Dauerauftrag erstellen" modal :style="{ width: '450px' }">

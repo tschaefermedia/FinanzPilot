@@ -28,7 +28,7 @@ const providerOptions = [
 ];
 
 const defaultModels = {
-    claude: 'claude-sonnet-4-5-20250514',
+    claude: 'claude-opus-5-5',
     openai: 'gpt-4o',
     ollama: 'llama3',
 };
@@ -47,6 +47,19 @@ function submit() {
 }
 
 const showClearDialog = ref(false);
+const passwordForm = useForm({
+    current_password: '',
+    password: '',
+    password_confirmation: '',
+});
+
+function submitPassword() {
+    passwordForm.put('/settings/password', {
+        preserveScroll: true,
+        onFinish: () => passwordForm.reset(),
+    });
+}
+
 const clearConfirmation = ref('');
 const clearProcessing = ref(false);
 
@@ -114,10 +127,36 @@ function clearAll() {
                     </div>
                 </form>
             </div>
+            <!-- Account -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6 mt-6">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Passwort ändern</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Passwort vergessen? Im Container <code>php artisan user:reset-password</code> ausführen.</p>
+
+                <form @submit.prevent="submitPassword" class="space-y-4">
+                    <div>
+                        <label for="current_password" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Aktuelles Passwort</label>
+                        <Password inputId="current_password" v-model="passwordForm.current_password" :feedback="false" toggleMask autocomplete="current-password" class="w-full" inputClass="w-full" />
+                        <small v-if="passwordForm.errors.current_password" class="text-red-500">{{ passwordForm.errors.current_password }}</small>
+                    </div>
+                    <div>
+                        <label for="new_password" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Neues Passwort</label>
+                        <Password inputId="new_password" v-model="passwordForm.password" :feedback="false" toggleMask autocomplete="new-password" class="w-full" inputClass="w-full" />
+                        <small v-if="passwordForm.errors.password" class="text-red-500">{{ passwordForm.errors.password }}</small>
+                    </div>
+                    <div>
+                        <label for="new_password_confirmation" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Neues Passwort bestätigen</label>
+                        <Password inputId="new_password_confirmation" v-model="passwordForm.password_confirmation" :feedback="false" toggleMask autocomplete="new-password" class="w-full" inputClass="w-full" />
+                    </div>
+                    <div class="pt-2">
+                        <Button type="submit" label="Passwort ändern" icon="pi pi-lock" :loading="passwordForm.processing" />
+                    </div>
+                </form>
+            </div>
+
             <!-- Danger Zone -->
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-red-200 dark:border-red-800 p-6 mt-6">
                 <h3 class="text-lg font-semibold text-red-600 dark:text-red-400 mb-1">Gefahrenzone</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Alle Finanzdaten unwiderruflich löschen: Buchungen, Konten, Kategorien, Darlehen, Importe und Daueraufträge.</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Alle Finanzdaten unwiderruflich löschen: Buchungen, Konten, Kategorien, Darlehen, Importe, Daueraufträge, Kalenderzahlungen und KI-Verläufe.</p>
                 <Button label="Alle Daten löschen" icon="pi pi-trash" severity="danger" outlined @click="showClearDialog = true" />
             </div>
 

@@ -5,14 +5,20 @@ namespace App\Http\Controllers;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Transaction;
+use App\Services\TransferService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class TransactionController extends Controller
 {
+    public function __construct(
+        private TransferService $transfers,
+    ) {}
+
     public function index(Request $request)
     {
-        $query = Transaction::with(['category', 'account']);
+        $query = Transaction::with(['category', 'account', 'transferCounterpart.account']);
 
         if ($request->filled('search')) {
             $search = '%'.$request->search.'%';
@@ -102,7 +108,7 @@ class TransactionController extends Controller
     public function edit(Transaction $transaction)
     {
         return Inertia::render('Transactions/Form', [
-            'transaction' => $transaction->load('category'),
+            'transaction' => $transaction->load(['category', 'transferCounterpart.account']),
             'categories' => Category::tree(),
             'accounts' => Account::activeOrdered()->get(),
         ]);
@@ -120,6 +126,10 @@ class TransactionController extends Controller
             'account_id' => 'nullable|exists:accounts,id',
         ]);
 
+        if ($transaction->isTransferLeg()) {
+            $this->ensureTransferLegStaysConsistent($transaction, $validated);
+        }
+
         $transaction->update($validated);
 
         return redirect()->route('transactions.index')->with('success', 'Buchung aktualisiert.');
@@ -127,6 +137,10 @@ class TransactionController extends Controller
 
     public function destroy(Transaction $transaction)
     {
+        if ($transaction->isTransferLeg()) {
+            $this->transfers->unlink($transaction);
+        }
+
         $transaction->delete();
 
         return redirect()->back()->with('success', 'Buchung gelöscht.');
@@ -140,6 +154,12 @@ class TransactionController extends Controller
             'account_id' => 'nullable|exists:accounts,id',
         ]);
 
+        if (Transaction::whereIn('id', $request->transaction_ids)->whereNotNull('transfer_transaction_id')->exists()) {
+            throw ValidationException::withMessages([
+                'transaction_ids' => 'Verknüpfte Umbuchungen können nicht per Sammelaktion geändert werden. Bitte zuerst die Verknüpfung lösen.',
+            ]);
+        }
+
         Transaction::whereIn('id', $request->transaction_ids)
             ->update(['account_id' => $request->account_id]);
 
@@ -147,5 +167,26 @@ class TransactionController extends Controller
             'success',
             count($request->transaction_ids).' Buchungen aktualisiert.'
         );
+    }
+
+    /**
+     * A transfer leg must keep its amount, account and transfer category,
+     * otherwise the pair no longer cancels out in the reports.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function ensureTransferLegStaysConsistent(Transaction $transaction, array $validated): void
+    {
+        $newCategoryType = Category::find($validated['category_id'] ?? null)?->type;
+
+        $changesBreakTransfer = round((float) $validated['amount'], 2) !== round((float) $transaction->amount, 2)
+            || (int) ($validated['account_id'] ?? 0) !== (int) $transaction->account_id
+            || $newCategoryType !== 'transfer';
+
+        if ($changesBreakTransfer) {
+            throw ValidationException::withMessages([
+                'transfer' => 'Betrag, Konto und Kategorie einer verknüpften Umbuchung können nicht geändert werden. Bitte zuerst die Verknüpfung lösen.',
+            ]);
+        }
     }
 }

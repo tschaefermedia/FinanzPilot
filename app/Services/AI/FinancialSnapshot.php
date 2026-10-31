@@ -37,8 +37,8 @@ class FinancialSnapshot
     public static function capture(): self
     {
         $currentMonth = now()->format('Y-m');
-        $prevMonth = now()->subMonth()->format('Y-m');
-        $twelveMonthsAgo = now()->subMonths(12)->startOfMonth()->toDateString();
+        $prevMonth = now()->subMonthNoOverflow()->format('Y-m');
+        $twelveMonthsAgo = now()->subMonthsNoOverflow(12)->startOfMonth()->toDateString();
 
         // Monthly income and expenses for last 12 months
         $monthly = Transaction::selectRaw("
@@ -57,7 +57,7 @@ class FinancialSnapshot
 
         // When incomplete, use last complete month for headline metrics
         $referenceMonth = $currentMonthComplete ? $currentMonth : $prevMonth;
-        $comparisonMonth = $currentMonthComplete ? $prevMonth : now()->subMonths(2)->format('Y-m');
+        $comparisonMonth = $currentMonthComplete ? $prevMonth : now()->subMonthsNoOverflow(2)->format('Y-m');
 
         // Normalize to ratios (income = 100)
         $monthlyRatios = $monthly->map(function ($m) use ($currentMonth, $currentMonthComplete) {
@@ -250,7 +250,7 @@ class FinancialSnapshot
             // Historical adherence (last 3 months)
             $adherence = [];
             for ($i = 1; $i <= 3; $i++) {
-                $histMonth = now()->subMonths($i)->format('Y-m');
+                $histMonth = now()->subMonthsNoOverflow($i)->format('Y-m');
                 $histSpent = Transaction::where('category_id', $category->id)
                     ->where('amount', '<', 0)
                     ->whereRaw("strftime('%Y-%m', date) = ?", [$histMonth])
@@ -374,7 +374,7 @@ class FinancialSnapshot
         $anomalies = [];
 
         // Large single transactions (>2x category monthly average over last 3 months)
-        $threeMonthsAgo = now()->subMonths(3)->startOfMonth()->toDateString();
+        $threeMonthsAgo = now()->subMonthsNoOverflow(3)->startOfMonth()->toDateString();
         $categoryAvgs = Transaction::select('category_id', DB::raw('AVG(ABS(amount)) as avg_amount'))
             ->where('amount', '<', 0)
             ->where('date', '>=', $threeMonthsAgo)
@@ -451,14 +451,14 @@ class FinancialSnapshot
             $lines[] = "  {$m['month']}: Ausgaben={$m['expenses']}% vom Einkommen, Sparquote={$m['savings']}%";
         }
 
-        $refMonth = $this->currentMonthComplete ? now()->format('Y-m') : now()->subMonth()->format('Y-m');
+        $refMonth = $this->currentMonthComplete ? now()->format('Y-m') : now()->subMonthNoOverflow()->format('Y-m');
         $lines[] = "\nAusgaben nach Kategorie ({$refMonth}):";
         foreach ($this->categoryShares as $c) {
             $lines[] = "  {$c['category']}: {$c['share']}%";
         }
 
         $lines[] = "\nSparquote ({$refMonth}): {$this->savingsRate}%";
-        $compMonth = $this->currentMonthComplete ? now()->subMonth()->format('Y-m') : now()->subMonths(2)->format('Y-m');
+        $compMonth = $this->currentMonthComplete ? now()->subMonthNoOverflow()->format('Y-m') : now()->subMonthsNoOverflow(2)->format('Y-m');
         $lines[] = "Trend gegenüber {$compMonth}: ".($this->savingsRateTrend >= 0 ? '+' : '')."{$this->savingsRateTrend}%";
 
         if (! empty($this->topGrowingCategories)) {
@@ -544,7 +544,7 @@ class FinancialSnapshot
         foreach ($completeMonths as $m) {
             $lines[] = "  {$m['month']}: Ausgaben={$m['expenses']}%, Sparquote={$m['savings']}%";
         }
-        $refMonth = $this->currentMonthComplete ? now()->format('Y-m') : now()->subMonth()->format('Y-m');
+        $refMonth = $this->currentMonthComplete ? now()->format('Y-m') : now()->subMonthNoOverflow()->format('Y-m');
         $lines[] = "\nSparquote ({$refMonth}): {$this->savingsRate}%";
         $stabilityLabel = $this->incomeStability < 10 ? 'sehr stabil' : ($this->incomeStability < 25 ? 'mäßig stabil' : 'schwankend');
         $lines[] = "Einkommensstabilität: {$stabilityLabel} (CV {$this->incomeStability}%)";

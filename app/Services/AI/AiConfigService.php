@@ -3,6 +3,8 @@
 namespace App\Services\AI;
 
 use App\Models\Setting;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\Log;
 
 class AiConfigService
 {
@@ -20,15 +22,7 @@ class AiConfigService
             return null;
         }
 
-        $apiKey = null;
-        $rawKey = Setting::get('ai_api_key');
-        if ($rawKey) {
-            try {
-                $apiKey = decrypt($rawKey);
-            } catch (\Throwable) {
-                $apiKey = $rawKey;
-            }
-        }
+        $apiKey = static::apiKey();
 
         $model = Setting::get('ai_model', '');
         $baseUrl = Setting::get('ai_base_url', '');
@@ -61,6 +55,26 @@ class AiConfigService
     }
 
     /**
+     * Decrypt the stored API key. Returns null when none is stored or it was
+     * encrypted with a different APP_KEY, so the user is asked to re-enter it.
+     */
+    public static function apiKey(): ?string
+    {
+        $encryptedKey = Setting::get('ai_api_key');
+        if (! $encryptedKey) {
+            return null;
+        }
+
+        try {
+            return decrypt($encryptedKey);
+        } catch (DecryptException) {
+            Log::warning('Stored AI API key cannot be decrypted, likely because APP_KEY changed. Re-enter it in the settings.');
+
+            return null;
+        }
+    }
+
+    /**
      * Get the default model for the configured provider.
      */
     public static function model(): ?string
@@ -73,7 +87,7 @@ class AiConfigService
         $providerType = Setting::get('ai_provider', 'none');
 
         return match ($providerType) {
-            'claude' => 'claude-sonnet-4-5-20250514',
+            'claude' => 'claude-opus-5-5',
             'openai' => 'gpt-4o',
             'ollama' => 'llama3',
             default => null,

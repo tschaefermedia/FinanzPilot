@@ -17,6 +17,8 @@ class RecurringDetectorTest extends TestCase
     {
         parent::setUp();
         Setting::flushCache();
+        // Detection only looks at the last months; the fixtures are in early 2026.
+        $this->travelTo('2026-05-10');
     }
 
     private function tx(string $date, float $amount, string $counterparty, string $description = 'x'): void

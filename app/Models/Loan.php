@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\DateOnly;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,7 +21,7 @@ class Loan extends Model
             'interest_rate' => 'decimal:2',
             'monthly_rate' => 'decimal:2',
             'initial_balance' => 'decimal:2',
-            'start_date' => 'date',
+            'start_date' => DateOnly::class,
         ];
     }
 

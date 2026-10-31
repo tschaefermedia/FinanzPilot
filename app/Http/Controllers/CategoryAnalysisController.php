@@ -26,7 +26,7 @@ class CategoryAnalysisController extends Controller
             $lastMonth = $now;
         }
 
-        $selectedDate = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
+        $selectedDate = Carbon::createFromFormat('!Y-m', $selectedMonth)->startOfMonth();
         $prevMonth = $selectedMonth > $firstMonth ? $selectedDate->copy()->subMonth()->format('Y-m') : null;
         $nextMonth = $selectedMonth < $lastMonth ? $selectedDate->copy()->addMonth()->format('Y-m') : null;
 
@@ -64,7 +64,7 @@ class CategoryAnalysisController extends Controller
 
         $monthsElapsed = 1;
         if ($selectedMonth >= $firstMonth) {
-            $monthsElapsed = Carbon::createFromFormat('Y-m', $firstMonth)->startOfMonth()->diffInMonths($selectedDate) + 1;
+            $monthsElapsed = Carbon::createFromFormat('!Y-m', $firstMonth)->startOfMonth()->diffInMonths($selectedDate) + 1;
         }
 
         // Load the full category tree so aggregation works at any nesting depth.

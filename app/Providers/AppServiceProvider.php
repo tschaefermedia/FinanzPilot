@@ -20,7 +20,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if ($this->app->environment('production')) {
+        // Behind a TLS-terminating proxy the request arrives as http.
+        if (str_starts_with(config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }
     }

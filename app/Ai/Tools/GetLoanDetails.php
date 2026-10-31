@@ -26,7 +26,7 @@ class GetLoanDetails implements Tool
 
         // Get current monthly income for burden calculation
         $currentIncome = Transaction::where('amount', '>', 0)
-            ->whereRaw("strftime('%Y-%m', date) = ?", [now()->subMonth()->format('Y-m')])
+            ->whereRaw("strftime('%Y-%m', date) = ?", [now()->subMonthNoOverflow()->format('Y-m')])
             ->sum('amount');
 
         $amortization = new AmortizationService;

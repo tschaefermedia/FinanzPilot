@@ -172,7 +172,7 @@ const balanceSeries = computed(() => [
                     <VueApexCharts type="donut" :options="categoryChartOptions" :series="categorySeries" height="300" />
                 </div>
             </div>
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <div v-if="balanceData.length > 0" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6">
                 <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Kontoverlauf</h3>
                 <VueApexCharts type="area" :options="balanceChartOptions" :series="balanceSeries" height="300" />
             </div>

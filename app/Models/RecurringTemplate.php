@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\DateOnly;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,7 @@ class RecurringTemplate extends Model
 {
     protected function casts(): array
     {
-        return ['amount' => 'decimal:2', 'next_due_date' => 'date', 'is_active' => 'boolean', 'auto_generate' => 'boolean'];
+        return ['amount' => 'decimal:2', 'next_due_date' => DateOnly::class, 'is_active' => 'boolean', 'auto_generate' => 'boolean'];
     }
 
     public function category(): BelongsTo

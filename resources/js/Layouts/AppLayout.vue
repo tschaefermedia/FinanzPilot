@@ -104,7 +104,10 @@ function isActive(href) {
             </template>
         </nav>
 
-        <div class="px-3 py-4 border-t border-gray-100 dark:border-gray-700">
+        <div class="px-3 py-4 border-t border-gray-100 dark:border-gray-700 space-y-1">
+            <p v-if="page.props.auth?.user" class="px-3 pb-2 text-xs text-gray-500 dark:text-gray-400 truncate" :title="page.props.auth.user.email">
+                Angemeldet als {{ page.props.auth.user.name }}
+            </p>
             <button
                 @click="toggleTheme"
                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white w-full transition-colors"
@@ -112,6 +115,15 @@ function isActive(href) {
                 <i :class="[isDark ? 'pi pi-sun' : 'pi pi-moon', 'text-base']"></i>
                 {{ isDark ? 'Hell' : 'Dunkel' }}
             </button>
+            <Link
+                href="/logout"
+                method="post"
+                as="button"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white w-full transition-colors"
+            >
+                <i class="pi pi-sign-out text-base"></i>
+                Abmelden
+            </Link>
         </div>
     </aside>
 

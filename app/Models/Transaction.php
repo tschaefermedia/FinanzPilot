@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\DateOnly;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,7 +17,7 @@ class Transaction extends Model
     protected function casts(): array
     {
         return [
-            'date' => 'date',
+            'date' => DateOnly::class,
             'amount' => 'decimal:2',
         ];
     }
@@ -39,5 +40,18 @@ class Transaction extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    /**
+     * The opposite leg of a transfer between two accounts. Both legs point at each other.
+     */
+    public function transferCounterpart(): BelongsTo
+    {
+        return $this->belongsTo(Transaction::class, 'transfer_transaction_id');
+    }
+
+    public function isTransferLeg(): bool
+    {
+        return $this->transfer_transaction_id !== null;
     }
 }

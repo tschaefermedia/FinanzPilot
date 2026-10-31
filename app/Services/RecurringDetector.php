@@ -20,7 +20,7 @@ class RecurringDetector
      */
     public function detect(int $months = 6, int $minOccurrences = 3): array
     {
-        $since = now()->subMonths($months)->startOfMonth();
+        $since = now()->subMonthsNoOverflow($months)->startOfMonth();
 
         $transactions = Transaction::query()
             ->where('date', '>=', $since->toDateString())
