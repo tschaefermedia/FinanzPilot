@@ -17,7 +17,7 @@ class GetCategoryBreakdown implements Tool
 
     public function handle(Request $request): string
     {
-        $month = $request['month'] ?? now()->subMonth()->format('Y-m');
+        $month = $request['month'] ?? now()->subMonthNoOverflow()->format('Y-m');
 
         $categories = Transaction::select('categories.name', DB::raw('SUM(ABS(transactions.amount)) as total'))
             ->join('categories', 'transactions.category_id', '=', 'categories.id')

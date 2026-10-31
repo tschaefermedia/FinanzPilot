@@ -22,7 +22,7 @@ class CalendarController extends Controller
             $selectedMonth = $now;
         }
 
-        $selectedDate = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
+        $selectedDate = Carbon::createFromFormat('!Y-m', $selectedMonth)->startOfMonth();
         $rangeStart = $selectedDate->copy()->startOfMonth();
         $rangeEnd = $selectedDate->copy()->addMonths(2)->endOfMonth();
 

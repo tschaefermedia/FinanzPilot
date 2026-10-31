@@ -10,10 +10,10 @@ class TrendController extends Controller
 {
     public function __invoke()
     {
-        $twelveMonthsAgo = now()->subMonths(12)->startOfMonth()->toDateString();
-        $sixMonthsAgo = now()->subMonths(6)->startOfMonth()->toDateString();
+        $twelveMonthsAgo = now()->subMonthsNoOverflow(12)->startOfMonth()->toDateString();
+        $sixMonthsAgo = now()->subMonthsNoOverflow(6)->startOfMonth()->toDateString();
         $currentMonth = now()->format('Y-m');
-        $prevMonth = now()->subMonth()->format('Y-m');
+        $prevMonth = now()->subMonthNoOverflow()->format('Y-m');
 
         // 12-month income/expense totals
         $monthlyData = Transaction::selectRaw("
@@ -62,7 +62,7 @@ class TrendController extends Controller
             // 3-month trailing average (months before current)
             $trailingMonths = [];
             for ($i = 1; $i <= 3; $i++) {
-                $m = now()->subMonths($i)->format('Y-m');
+                $m = now()->subMonthsNoOverflow($i)->format('Y-m');
                 if (isset($monthMap[$m])) {
                     $trailingMonths[] = $monthMap[$m];
                 }

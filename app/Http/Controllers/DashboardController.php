@@ -35,7 +35,7 @@ class DashboardController extends Controller
             $lastMonth = $now;
         }
 
-        $selectedDate = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
+        $selectedDate = Carbon::createFromFormat('!Y-m', $selectedMonth)->startOfMonth();
         $prevMonth = $selectedMonth > $firstMonth ? $selectedDate->copy()->subMonth()->format('Y-m') : null;
         $nextMonth = $selectedMonth < $lastMonth ? $selectedDate->copy()->addMonth()->format('Y-m') : null;
 
@@ -46,7 +46,7 @@ class DashboardController extends Controller
                 SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as income,
                 SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as expenses
             ")
-            ->where('date', '>=', now()->subMonths(12)->startOfMonth()->toDateString())
+            ->where('date', '>=', now()->subMonthsNoOverflow(12)->startOfMonth()->toDateString())
             ->whereDoesntHave('category', fn ($q) => $q->where('type', 'transfer'))
             ->groupByRaw("strftime('%Y-%m', date)")
             ->orderBy('month')
@@ -64,7 +64,7 @@ class DashboardController extends Controller
             ->orderByDesc('total')
             ->get();
 
-        $balanceData = $this->accountBalanceHistory(now()->subMonths(12)->startOfMonth());
+        $balanceData = $this->accountBalanceHistory(now()->subMonthsNoOverflow(12)->startOfMonth());
 
         $currentMonthData = $monthlyData->firstWhere('month', $currentMonth);
         $income = $currentMonthData?->income ?? 0;

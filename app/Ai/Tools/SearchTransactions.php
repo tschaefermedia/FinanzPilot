@@ -17,7 +17,7 @@ class SearchTransactions implements Tool
     public function handle(Request $request): string
     {
         $months = $request['months'] ?? 3;
-        $dateFrom = now()->subMonths($months)->startOfMonth()->toDateString();
+        $dateFrom = now()->subMonthsNoOverflow($months)->startOfMonth()->toDateString();
 
         $query = Transaction::with('category')
             ->where('date', '>=', $dateFrom)
