@@ -11,7 +11,7 @@ class SearchTransactions implements Tool
 {
     public function description(): string
     {
-        return 'Suche Buchungen nach Kategorie, Zeitraum oder Stichwort. Gibt Buchungen als Prozent vom monatlichen Einkommen zurück.';
+        return 'Suche Buchungen nach Kategorie, Zeitraum oder Stichwort. Gibt Datum, Kategorie und Betrag als Prozent vom monatlichen Einkommen zurück, aus Datenschutzgründen ohne Buchungstext.';
     }
 
     public function handle(Request $request): string
@@ -47,7 +47,7 @@ class SearchTransactions implements Tool
 
             $categoryName = $tx->category?->name ?: 'Ohne';
 
-            return "{$tx->date} | {$categoryName} | {$percentOfIncome}% vom Einkommen | {$tx->description}";
+            return "{$tx->date} | {$categoryName} | {$percentOfIncome}% vom Einkommen";
         });
 
         return $results->isEmpty()
