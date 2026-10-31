@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\AiInsight;
+use App\Models\ImportMapping;
+use App\Models\ScheduledPayment;
 use App\Models\Setting;
 use App\Services\AI\AiConfigService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,6 +18,19 @@ class SettingsControllerTest extends TestCase
     {
         parent::setUp();
         Setting::flushCache();
+    }
+
+    public function test_clear_all_also_removes_scheduled_payments_and_ai_history_but_keeps_mappings(): void
+    {
+        ScheduledPayment::factory()->create();
+        AiInsight::create(['snapshot_hash' => 'x', 'provider' => 'Claude']);
+        ImportMapping::create(['name' => 'Bank', 'source_type' => 'generic', 'column_mapping' => []]);
+
+        $this->delete('/settings/clear-all')->assertRedirect();
+
+        $this->assertSame(0, ScheduledPayment::count());
+        $this->assertSame(0, AiInsight::count());
+        $this->assertSame(1, ImportMapping::count());
     }
 
     public function test_api_key_encrypted_with_another_app_key_is_treated_as_missing(): void

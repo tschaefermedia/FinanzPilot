@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Account;
+use App\Models\AiInsight;
 use App\Models\Category;
 use App\Models\CategoryRule;
 use App\Models\ImportBatch;
 use App\Models\Loan;
 use App\Models\LoanPayment;
 use App\Models\RecurringTemplate;
+use App\Models\ScheduledPayment;
 use App\Models\Setting;
 use App\Models\Transaction;
 use App\Services\AI\AiConfigService;
@@ -54,6 +56,10 @@ class SettingsController extends Controller
     public function clearAll()
     {
         DB::transaction(function () {
+            DB::table('agent_conversation_messages')->delete();
+            DB::table('agent_conversations')->delete();
+            AiInsight::query()->delete();
+            ScheduledPayment::query()->delete();
             LoanPayment::query()->forceDelete();
             Loan::query()->forceDelete();
             CategoryRule::query()->delete();

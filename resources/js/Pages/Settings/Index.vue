@@ -117,7 +117,7 @@ function clearAll() {
             <!-- Danger Zone -->
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-red-200 dark:border-red-800 p-6 mt-6">
                 <h3 class="text-lg font-semibold text-red-600 dark:text-red-400 mb-1">Gefahrenzone</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Alle Finanzdaten unwiderruflich löschen: Buchungen, Konten, Kategorien, Darlehen, Importe und Daueraufträge.</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Alle Finanzdaten unwiderruflich löschen: Buchungen, Konten, Kategorien, Darlehen, Importe, Daueraufträge, Kalenderzahlungen und KI-Verläufe.</p>
                 <Button label="Alle Daten löschen" icon="pi pi-trash" severity="danger" outlined @click="showClearDialog = true" />
             </div>
 
