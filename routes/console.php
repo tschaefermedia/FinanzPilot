@@ -11,3 +11,4 @@ use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('recurring:generate')->daily();
 Schedule::command('imports:prune-uploads')->daily();
+Schedule::command('backup:database')->dailyAt('02:00');
