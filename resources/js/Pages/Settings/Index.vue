@@ -28,7 +28,7 @@ const providerOptions = [
 ];
 
 const defaultModels = {
-    claude: 'claude-sonnet-4-5-20250514',
+    claude: 'claude-opus-5-5',
     openai: 'gpt-4o',
     ollama: 'llama3',
 };

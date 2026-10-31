@@ -41,6 +41,8 @@ return [
         'anthropic' => [
             'driver' => 'anthropic',
             'key' => env('ANTHROPIC_API_KEY', ''),
+            // Enables native structured output; the forced tool_choice fallback is rejected by current Claude models.
+            'anthropic_beta' => 'structured-outputs-2025-11-13',
         ],
 
         'openai' => [

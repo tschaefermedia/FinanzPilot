@@ -11,6 +11,7 @@ use App\Models\LoanPayment;
 use App\Models\RecurringTemplate;
 use App\Models\Setting;
 use App\Models\Transaction;
+use App\Services\AI\AiConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -24,7 +25,7 @@ class SettingsController extends Controller
                 'ai_provider' => Setting::get('ai_provider', 'none'),
                 'ai_model' => Setting::get('ai_model', ''),
                 'ai_base_url' => Setting::get('ai_base_url', ''),
-                'ai_api_key_set' => ! empty(Setting::get('ai_api_key')),
+                'ai_api_key_set' => AiConfigService::apiKey() !== null,
             ],
         ]);
     }
